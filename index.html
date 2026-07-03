@@ -723,8 +723,8 @@
   #scrim.show{ display:block; }
 
   @media (max-width: 720px){
-    #sidebar{ position:fixed; height:100%; transform: translateX(-100%); }
-    #sidebar.show{ transform: translateX(0); }
+    #sidebar{ position:fixed; top:0; left:0; height:100%; transform: translateX(-100%); z-index: 40; }
+    #sidebar.show{ transform: translateX(0) !important; }
     #chat-area{ padding: 16px 14px 130px 14px; }
     .bubble-col{ max-width: 86%; }
   }
@@ -1252,9 +1252,42 @@ function buildGeminiTools(){
 /* =========================================================
    Init Firebase
    ========================================================= */
-firebase.initializeApp(firebaseConfig);
-const auth = firebase.auth();
-const db = firebase.firestore();
+let auth, db;
+let firebaseReady = false;
+try {
+  if (typeof firebase === 'undefined') {
+    throw new Error('Firebase SDK gagal dimuat (cek koneksi internet / CDN diblokir)');
+  }
+  firebase.initializeApp(firebaseConfig);
+  auth = firebase.auth();
+  db = firebase.firestore();
+  firebaseReady = true;
+} catch (err) {
+  console.error('Firebase init gagal, fitur login/chat history dinonaktifkan:', err);
+  // Fallback dummy supaya pemanggilan auth/db di tempat lain tidak melempar error
+  // dan seluruh script (termasuk semua tombol UI) tetap jalan.
+  auth = {
+    onAuthStateChanged: (cb) => {
+      // Firebase gagal load: langsung tutup login-overlay via DOM
+      // (bukan lewat callback, karena cb(null) justru menampilkannya).
+      const el = document.getElementById('login-overlay');
+      if (el) el.classList.add('hidden');
+    },
+    signInWithPopup: () => Promise.reject(err),
+    signOut: () => Promise.resolve(),
+  };
+  db = {
+    collection: () => ({
+      doc: () => ({
+        set: () => Promise.reject(err),
+        get: () => Promise.reject(err),
+        collection: () => ({ add: () => Promise.reject(err), orderBy: () => ({ onSnapshot: () => {} }) }),
+      }),
+      where: () => ({ orderBy: () => ({ onSnapshot: () => {} }) }),
+      add: () => Promise.reject(err),
+    }),
+  };
+}
 
 let currentUser = null;
 let currentChatId = null;
