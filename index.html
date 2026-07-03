@@ -1,0 +1,2669 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Astra</title>
+
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+
+<style>
+  :root{
+    --bg: #FAF9F6;
+    --bg-sidebar: #F0EEE7;
+    --surface: #FFFFFF;
+    --border: #E6E3DA;
+    --text: #2B2A27;
+    --text-soft: #6B6A63;
+    --accent: #B85C38;
+    --accent-soft: #F1E3D8;
+    --bubble-user: #EDEAE2;
+    --bubble-ai: transparent;
+    --radius: 14px;
+    --font-display: 'Source Serif Pro', Georgia, serif;
+    --font-body: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  }
+  [data-theme="dark"]{
+    --bg: #1E1D1B;
+    --bg-sidebar: #262421;
+    --surface: #2A2825;
+    --border: #3A3733;
+    --text: #EDEAE2;
+    --text-soft: #9B968C;
+    --accent: #D97757;
+    --accent-soft: #3A2E27;
+    --bubble-user: #34312C;
+    --bubble-ai: transparent;
+  }
+
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{height:100%; margin:0;}
+  body{
+    font-family: var(--font-body);
+    background: var(--bg);
+    color: var(--text);
+    display:flex;
+    overflow:hidden;
+    transition: background .2s ease, color .2s ease;
+  }
+
+  /* ---------- Sidebar ---------- */
+  #sidebar{
+    width: 260px;
+    background: var(--bg-sidebar);
+    border-right: 1px solid var(--border);
+    display:flex;
+    flex-direction:column;
+    flex-shrink:0;
+    transition: transform .25s ease;
+    z-index: 30;
+  }
+  #sidebar.hidden{ transform: translateX(-100%); position:absolute; height:100%; }
+  .brand{
+    display:flex; align-items:center; gap:10px;
+    padding: 18px 16px 14px 16px;
+  }
+  .brand-mark{
+    width:28px;height:28px;border-radius:8px;
+    background: linear-gradient(135deg, var(--accent), #E8A87C);
+    display:flex;align-items:center;justify-content:center;
+    color:#fff; font-family:var(--font-display); font-weight:600; font-size:15px;
+    flex-shrink:0;
+  }
+  .brand-name{ font-family:var(--font-display); font-size:17px; font-weight:600; letter-spacing:.2px; }
+
+  .new-chat-btn{
+    margin: 4px 12px 10px 12px;
+    padding: 9px 12px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text);
+    font-size: 13.5px;
+    display:flex; align-items:center; gap:8px;
+    cursor:pointer;
+  }
+  .new-chat-btn:hover{ background: var(--accent-soft); }
+
+  #history{
+    flex:1; overflow-y:auto; padding: 6px 8px;
+  }
+  .history-item{
+    padding: 9px 10px;
+    border-radius: 8px;
+    font-size: 13.5px;
+    color: var(--text-soft);
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+    cursor:pointer;
+    margin-bottom: 2px;
+  }
+  .history-item:hover, .history-item.active{
+    background: var(--surface);
+    color: var(--text);
+  }
+
+  #user-box{
+    border-top: 1px solid var(--border);
+    padding: 12px 14px;
+    display:flex; align-items:center; gap:10px;
+    cursor:pointer;
+  }
+  #user-avatar{
+    width:30px;height:30px;border-radius:50%;
+    background: var(--accent-soft); color: var(--accent);
+    display:flex;align-items:center;justify-content:center;
+    font-size:13px; font-weight:600; flex-shrink:0;
+    object-fit:cover;
+  }
+  #user-name{ font-size:13.5px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  #user-sub{ font-size:11.5px; color:var(--text-soft); }
+
+  /* ---------- Main ---------- */
+  #main{ flex:1; display:flex; flex-direction:column; min-width:0; height:100%; }
+
+  #topbar{
+    display:flex; align-items:center; justify-content:space-between;
+    padding: 12px 16px;
+    flex-shrink:0;
+  }
+  #menu-btn{
+    width:36px;height:36px; border-radius:8px; border:none; background:transparent;
+    color: var(--text); cursor:pointer; display:flex; align-items:center; justify-content:center;
+  }
+  #menu-btn:hover{ background: var(--accent-soft); }
+  #model-tag{
+    font-size: 13px; color: var(--text-soft);
+    border: 1px solid var(--border);
+    padding: 5px 12px; border-radius: 20px;
+  }
+  #theme-toggle{
+    width:36px;height:36px; border-radius:8px; border:none; background:transparent;
+    color: var(--text); cursor:pointer; display:flex; align-items:center; justify-content:center;
+  }
+  #theme-toggle:hover{ background: var(--accent-soft); }
+
+  #chat-scroll{ flex:1; overflow-y:auto; }
+  #chat-area{
+    max-width: 760px; margin: 0 auto; padding: 20px 20px 140px 20px;
+  }
+
+  #welcome{
+    height: calc(100vh - 220px);
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    text-align:center; gap: 6px;
+  }
+  #welcome .glyph{
+    width:56px;height:56px;border-radius:16px;
+    background: linear-gradient(135deg, var(--accent), #E8A87C);
+    display:flex;align-items:center;justify-content:center;
+    color:#fff; font-family:var(--font-display); font-size:26px; font-weight:600;
+    margin-bottom: 18px;
+  }
+  #welcome h1{ font-family: var(--font-display); font-weight:500; font-size: 26px; margin: 0 0 4px 0; }
+  #welcome p{ color: var(--text-soft); font-size: 14.5px; margin:0; }
+
+  .msg-row{ display:flex; gap:12px; margin-bottom: 26px; align-items:flex-start; }
+  .msg-row.user{ justify-content:flex-end; }
+  .avatar{
+    width:28px;height:28px;border-radius:7px; flex-shrink:0;
+    display:flex;align-items:center;justify-content:center;
+    font-size:12px; font-weight:600; margin-top:2px;
+  }
+  .avatar.ai{ background: linear-gradient(135deg, var(--accent), #E8A87C); color:#fff; }
+  .avatar.me{ background: var(--bubble-user); color: var(--text-soft); }
+
+  .bubble-col{
+    max-width: 78%; display:flex; flex-direction:column; min-width:0;
+  }
+  .bubble{
+    font-size: 15px; line-height:1.65; min-width:0;
+  }
+  .msg-row.user .bubble{
+    background: var(--bubble-user);
+    padding: 10px 15px;
+    border-radius: var(--radius);
+  }
+  .bubble p{ margin: 0 0 10px 0; }
+  .bubble p:last-child{ margin-bottom:0; }
+  .bubble::after, .bubble::before{ content: none !important; }
+  .bubble code{
+    background: var(--accent-soft); padding: 2px 5px; border-radius:4px; font-size: 13px;
+    word-break: break-word;
+  }
+
+  .code-block{
+    background: #1E1E1E; border:1px solid rgba(255,255,255,0.08);
+    border-radius: 12px; overflow:hidden; margin: 10px 0;
+    max-width: 100%; width: 100%;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.12);
+  }
+  .code-block-header{
+    display:flex; align-items:center; justify-content:space-between;
+    padding: 8px 14px; background: #2A2A2A;
+    border-bottom:1px solid rgba(255,255,255,0.06);
+    font-size: 12px; color: #B4B4B4;
+  }
+  .code-block-lang{
+    text-transform: lowercase; font-family: 'Courier New', monospace;
+    letter-spacing: 0.02em;
+  }
+  .code-block-actions{ display:flex; align-items:center; gap:2px; }
+  .code-copy-btn, .code-run-btn{
+    display:flex; align-items:center; gap:5px;
+    background:transparent; border:none; color: #B4B4B4;
+    cursor:pointer; padding: 4px 8px; border-radius:6px; font-size:12px;
+    font-family: var(--font-body); transition: background 0.15s, color 0.15s;
+  }
+  .code-copy-btn:hover, .code-run-btn:hover{ background: rgba(255,255,255,0.08); color: #fff; }
+  .code-copy-btn.copied{ color: #6FCF97; }
+  .code-run-btn{ color: #8FBF8F; }
+  .code-run-btn:hover{ color: #A6E3A6; }
+  .code-block-scroll{
+    max-height: 400px; max-width: 100%; overflow-y: auto; overflow-x:auto;
+    contain: layout;
+  }
+  .code-block-scroll pre{
+    margin:0; padding: 14px 16px; font-size:13px; background:none; border:none;
+    white-space: pre; width: max-content; min-width: 100%;
+    color: #E8E6E3; font-family: 'SF Mono', 'Fira Code', 'Courier New', monospace;
+    line-height: 1.55;
+  }
+  .code-block-scroll code{ background:none; padding:0; }
+  .code-block-scroll::-webkit-scrollbar{ height:8px; width:8px; }
+  .code-block-scroll::-webkit-scrollbar-thumb{ background: rgba(255,255,255,0.15); border-radius:4px; }
+  .code-block-scroll::-webkit-scrollbar-thumb:hover{ background: rgba(255,255,255,0.25); }
+
+  /* Saat masih streaming: kunci tinggi box supaya tidak melebar/mengecil naik-turun tiap karakter baru masuk */
+  .code-block-streaming .code-block-scroll{
+    height: 220px; max-height: 220px;
+  }
+  .code-block-streaming .code-block-lang::after{
+    content: '· menulis…'; color: #7A7A7A; font-style: italic;
+  }
+
+  /* Artifact preview panel */
+  #artifact-overlay{
+    position: fixed; inset: 0; background: rgba(0,0,0,0.45);
+    z-index: 200; display:none; align-items:stretch; justify-content:flex-end;
+  }
+  #artifact-overlay.open{ display:flex; }
+  #artifact-panel{
+    width: 100%; max-width: 560px; height: 100%;
+    background: var(--surface); display:flex; flex-direction:column;
+    box-shadow: -8px 0 24px rgba(0,0,0,0.18);
+    animation: artifactSlideIn 0.22s ease;
+  }
+  @keyframes artifactSlideIn{ from{ transform: translateX(24px); opacity:0; } to{ transform: translateX(0); opacity:1; } }
+  #artifact-header{
+    display:flex; align-items:center; justify-content:space-between;
+    padding: 12px 16px; border-bottom:1px solid var(--border); flex-shrink:0;
+  }
+  #artifact-title{ font-size:14px; font-weight:600; color:var(--text); display:flex; align-items:center; gap:8px; }
+  #artifact-actions{ display:flex; align-items:center; gap:6px; }
+  .artifact-btn{
+    background:transparent; border:1px solid var(--border); color: var(--text-soft);
+    cursor:pointer; padding: 6px 10px; border-radius:8px; font-size:12.5px;
+    display:flex; align-items:center; gap:5px; font-family: var(--font-body);
+  }
+  .artifact-btn:hover{ background: var(--accent-soft); color: var(--text); }
+  #artifact-frame-wrap{ flex:1; position:relative; background:#fff; }
+  #artifact-frame{ width:100%; height:100%; border:none; }
+  @media (max-width: 640px){
+    #artifact-panel{ max-width: 100%; }
+  }
+
+  .msg-images{ display:flex; flex-wrap:wrap; gap:8px; margin-bottom:8px; }
+  .msg-image{
+    max-width: 200px; max-height: 200px; border-radius: 12px; object-fit:cover;
+    display:block; cursor:pointer;
+  }
+
+  .typing{ display:flex; gap:4px; padding: 6px 0; }
+  .typing span{
+    width:6px;height:6px;border-radius:50%; background: var(--text-soft);
+    animation: bounce 1.2s infinite ease-in-out;
+  }
+  .typing span:nth-child(2){ animation-delay:.15s; }
+  .typing span:nth-child(3){ animation-delay:.3s; }
+  @keyframes bounce{ 0%,60%,100%{ transform: translateY(0); opacity:.4;} 30%{ transform: translateY(-4px); opacity:1;} }
+
+  .reading-indicator{
+    display:flex; align-items:center; gap:7px;
+    font-size: 12.5px; color: var(--text-soft);
+    padding: 6px 10px; margin-bottom: 8px;
+    background: var(--accent-soft); border-radius: 8px;
+    width: fit-content;
+  }
+  .reading-indicator svg{ flex-shrink:0; color: var(--accent); }
+  .reading-indicator span{ white-space: nowrap; }
+
+  /* ---------- Web search indicator (shimmer, beda tampilan dari reading-indicator) ---------- */
+  .search-indicator{
+    display:flex; align-items:center; gap:7px;
+    font-size: 12.5px;
+    padding: 6px 10px; margin-bottom: 8px;
+    width: fit-content;
+  }
+  .search-indicator svg{
+    flex-shrink:0; color: var(--text-soft);
+    animation: search-spin 1.4s linear infinite;
+  }
+  @keyframes search-spin{ 100%{ transform: rotate(360deg); } }
+  /* ---------- Source button (tombol "Sumber"/"Source" tunggal dgn stack favicon, mirip Claude) ---------- */
+  .source-chips-row{
+    margin: 10px 0 4px 0;
+  }
+  .source-btn{
+    display:inline-flex; align-items:center; gap:8px;
+    padding: 6px 8px 6px 14px;
+    border-radius: 20px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text);
+    font-size: 13px;
+    font-family: inherit;
+    cursor:pointer;
+    transition: background .15s ease, border-color .15s ease;
+  }
+  .source-btn:hover{ background: var(--accent-soft); border-color: var(--accent); }
+  .source-btn-favicons{
+    display:flex; align-items:center;
+  }
+  .source-btn-favicons .chip-favicon{
+    width:20px; height:20px; border-radius:50%; flex-shrink:0;
+    background: var(--bg-sidebar);
+    border: 1.5px solid var(--surface);
+    display:flex; align-items:center; justify-content:center;
+    overflow:hidden;
+    margin-left: -8px;
+  }
+  .source-btn-favicons .chip-favicon:first-child{ margin-left:0; }
+  .source-btn-favicons .chip-favicon img{ width:100%; height:100%; object-fit:cover; display:block; }
+
+  /* ---------- Sources bottom sheet (daftar lengkap sumber, gaya seperti screenshot referensi) ---------- */
+  #sources-overlay{
+    position:fixed; inset:0; background:rgba(0,0,0,0.35);
+    z-index:85; display:flex; align-items:flex-end; justify-content:center;
+    opacity:0; pointer-events:none; transition: opacity .2s ease;
+  }
+  #sources-overlay.open{ opacity:1; pointer-events:auto; }
+  #sources-overlay.hidden{ display:none; }
+  #sources-sheet{
+    position:relative; width:100%; max-width:520px; max-height: 82vh;
+    background: var(--surface); border:1px solid var(--border);
+    border-radius:20px 20px 0 0;
+    box-shadow: 0 -6px 24px rgba(0,0,0,0.14);
+    padding: 10px 18px 22px 18px;
+    transform: translateY(100%);
+    transition: transform .25s cubic-bezier(.32,.72,0,1);
+    display:flex; flex-direction:column;
+  }
+  #sources-overlay.open #sources-sheet{ transform: translateY(0); }
+  #sources-sheet.hidden{ display:none; }
+  .sources-sheet-handle{
+    width:36px; height:4px; border-radius:2px; background: var(--border);
+    margin: 4px auto 10px auto; flex-shrink:0;
+  }
+  .sources-sheet-header{
+    display:flex; align-items:center; justify-content:center; position:relative;
+    padding: 4px 0 14px 0; flex-shrink:0;
+  }
+  .sources-sheet-title{ font-size:16px; font-weight:600; color:var(--text); }
+  .sources-sheet-close{
+    position:absolute; left:0; top:0;
+    width:30px; height:30px; border-radius:50%; border:none;
+    background:transparent; color:var(--text); cursor:pointer;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .sources-sheet-close:hover{ background: var(--accent-soft); }
+  .sources-sheet-body{ overflow-y:auto; }
+  .sources-sheet-label{
+    font-size: 12.5px; color: var(--text-soft); margin: 10px 0 8px 0;
+  }
+  .sources-sheet-list{ display:flex; flex-direction:column; }
+  .sources-sheet-item{
+    display:flex; flex-direction:column; gap:6px;
+    padding: 12px 0; text-decoration:none; color: var(--text);
+    border-bottom: 1px solid var(--border);
+  }
+  .sources-sheet-item:last-child{ border-bottom:none; }
+  .sources-sheet-item:hover .sources-sheet-item-title{ text-decoration: underline; }
+  .sources-sheet-item-title{
+    font-size: 14.5px; line-height:1.35;
+    overflow:hidden; text-overflow:ellipsis; display:-webkit-box;
+    -webkit-line-clamp:1; -webkit-box-orient:vertical;
+  }
+  .sources-sheet-item-site{
+    display:flex; align-items:center; gap:8px;
+    font-size: 13px; color: var(--text-soft);
+  }
+  .sources-sheet-item-site .chip-favicon{
+    width:18px; height:18px; border-radius:50%; flex-shrink:0;
+    background: var(--bg-sidebar);
+    display:flex; align-items:center; justify-content:center;
+    overflow:hidden;
+  }
+  .sources-sheet-item-site .chip-favicon img{ width:100%; height:100%; object-fit:cover; display:block; }
+  .search-indicator .shimmer-text{
+    white-space: nowrap;
+    background: linear-gradient(
+      90deg,
+      var(--text-soft) 0%,
+      var(--text-soft) 35%,
+      #fff 50%,
+      var(--text-soft) 65%,
+      var(--text-soft) 100%
+    );
+    background-size: 200% 100%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    animation: shimmer-move 1.6s linear infinite;
+  }
+  @keyframes shimmer-move{
+    0%{ background-position: 200% 0; }
+    100%{ background-position: -200% 0; }
+  }
+
+  .cursor-blink{
+    display:inline-block; color: var(--accent);
+    animation: blink 0.9s step-start infinite;
+  }
+  @keyframes blink{ 50%{ opacity:0; } }
+
+  /* ---------- Composer ---------- */
+  #composer-wrap{
+    position: sticky; bottom:0; left:0; right:0;
+    background: linear-gradient(to top, var(--bg) 60%, transparent);
+    padding: 10px 20px 18px 20px;
+  }
+  #composer{
+    max-width: 760px; margin: 0 auto;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 22px;
+    display:flex; flex-direction:column;
+    padding: 12px 14px 10px 18px;
+    box-shadow: 0 2px 14px rgba(0,0,0,0.04);
+  }
+  [data-theme="dark"] #composer{ box-shadow: 0 2px 14px rgba(0,0,0,0.2); }
+  #input{
+    width:100%; border:none; outline:none; background:transparent; color: var(--text);
+    resize:none; font-family: var(--font-body); font-size: 15px; line-height:1.5;
+    max-height: 160px; padding: 4px 0 8px 0;
+    overflow-y: auto;
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE/Edge */
+  }
+  #input::-webkit-scrollbar{ display:none; width:0; height:0; } /* Chrome/Safari/Android */
+  #input::placeholder{ color: var(--text-soft); }
+
+  #composer-toolbar{
+    display:flex; align-items:center; justify-content:space-between;
+  }
+  #composer-toolbar-left{ display:flex; align-items:center; gap:8px; position:relative; }
+
+  #plus-btn{
+    width:32px; height:32px; border-radius:50%; border:1px solid var(--border);
+    background:transparent; color:var(--text); cursor:pointer;
+    display:flex; align-items:center; justify-content:center; flex-shrink:0;
+  }
+  #plus-btn:hover{ background: var(--accent-soft); }
+
+  #plus-menu-overlay{
+    position:fixed; inset:0; background:rgba(0,0,0,0.35);
+    z-index:80; display:flex; align-items:flex-end; justify-content:center;
+    opacity:0; pointer-events:none; transition: opacity .2s ease;
+  }
+  #plus-menu-overlay.open{ opacity:1; pointer-events:auto; }
+  #plus-menu-overlay.hidden{ display:none; }
+
+  #plus-menu{
+    position:relative; width:100%; max-width:520px;
+    background: var(--surface); border:1px solid var(--border);
+    border-radius:20px 20px 0 0;
+    box-shadow: 0 -6px 24px rgba(0,0,0,0.14);
+    padding: 10px 18px 26px 18px;
+    transform: translateY(100%);
+    transition: transform .25s cubic-bezier(.32,.72,0,1);
+  }
+  #plus-menu-overlay.open #plus-menu{ transform: translateY(0); }
+  #plus-menu.hidden{ display:none; }
+
+  .plus-menu-handle{
+    width:36px; height:4px; border-radius:2px; background: var(--border);
+    margin: 4px auto 14px auto;
+  }
+  .plus-menu-title{
+    text-align:center; font-size:15px; font-weight:600; color:var(--text);
+    margin: 0 0 16px 0;
+  }
+  .plus-menu-close{
+    position:absolute; top:12px; right:14px;
+    width:28px; height:28px; border-radius:50%; border:none;
+    background:transparent; color:var(--text); cursor:pointer;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .plus-menu-close:hover{ background: var(--accent-soft); }
+
+  .plus-menu-grid{
+    display:flex; gap:12px; margin-bottom: 14px;
+  }
+  .plus-menu-tile{
+    flex:1; display:flex; flex-direction:column; align-items:center; gap:8px;
+    padding: 16px 10px; border-radius:16px; cursor:pointer;
+    background: var(--bg-sidebar);
+  }
+  .plus-menu-tile:hover{ background: var(--accent-soft); }
+  .plus-menu-tile-icon{
+    width:38px; height:38px; border-radius:50%; background: var(--surface);
+    border:1px solid var(--border);
+    display:flex; align-items:center; justify-content:center; color: var(--text);
+  }
+  .plus-menu-tile span{ font-size: 13px; color: var(--text); }
+
+  .plus-menu-item{
+    display:flex; align-items:center; justify-content:space-between; gap:10px;
+    padding: 13px 10px; border-radius:12px; cursor:pointer;
+    font-size: 14.5px; color: var(--text);
+  }
+  .plus-menu-item:hover{ background: var(--accent-soft); }
+  .plus-menu-item-left{ display:flex; align-items:center; gap:12px; }
+  .plus-menu-item-icon{
+    width:34px; height:34px; border-radius:50%; background: var(--bg-sidebar);
+    display:flex; align-items:center; justify-content:center; color: var(--text); flex-shrink:0;
+  }
+  .plus-menu-toggle{
+    width:40px; height:24px; border-radius:12px; background: var(--border);
+    position:relative; flex-shrink:0; transition: background .15s ease; cursor:pointer;
+  }
+  .plus-menu-toggle::after{
+    content:''; position:absolute; top:2px; left:2px; width:20px; height:20px;
+    border-radius:50%; background:#fff; transition: transform .15s ease;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+  }
+  .plus-menu-toggle.on{ background: #3D7DF6; }
+  .plus-menu-toggle.on::after{ transform: translateX(16px); }
+
+  #model-selector{
+    display:flex; align-items:center; gap:5px;
+    border: 1px solid var(--border); border-radius:20px;
+    padding: 6px 10px 6px 12px; font-size: 12.5px; color: var(--text-soft);
+    flex-shrink:0; white-space:nowrap;
+    background: transparent; cursor:pointer; font-family: inherit;
+  }
+  #model-selector:hover{ background: var(--accent-soft); }
+
+  #model-picker-overlay{
+    position:fixed; inset:0; background:rgba(0,0,0,0.35);
+    z-index:80; display:flex; align-items:flex-end; justify-content:center;
+    opacity:0; pointer-events:none; transition: opacity .2s ease;
+  }
+  #model-picker-overlay.open{ opacity:1; pointer-events:auto; }
+  #model-picker-overlay.hidden{ display:none; }
+
+  #model-picker{
+    position:relative; width:100%; max-width:520px;
+    background: var(--surface); border:1px solid var(--border);
+    border-radius:20px 20px 0 0;
+    box-shadow: 0 -6px 24px rgba(0,0,0,0.14);
+    padding: 10px 18px 26px 18px;
+    transform: translateY(100%);
+    transition: transform .25s cubic-bezier(.32,.72,0,1);
+  }
+  #model-picker-overlay.open #model-picker{ transform: translateY(0); }
+  #model-picker.hidden{ display:none; }
+
+  .model-option{
+    display:flex; align-items:center; justify-content:space-between; gap:12px;
+    padding: 14px 10px; border-radius:12px; cursor:pointer;
+  }
+  .model-option:hover{ background: var(--accent-soft); }
+  .model-option-name{ font-size: 15px; font-weight:600; color: var(--text); }
+  .model-option-desc{ font-size: 12.5px; color: var(--text-soft); margin-top:2px; }
+  .model-option-check{ color: var(--accent); flex-shrink:0; opacity:0; }
+  .model-option.selected .model-option-check{ opacity:1; }
+  .model-option.selected .model-option-name{ color: var(--accent); }
+
+  #image-preview-row{
+    display:flex; gap:8px; flex-wrap:wrap;
+  }
+  #image-preview-row:empty{ display:none; }
+  .image-preview-item{
+    position:relative; width:60px; height:60px; border-radius:10px; overflow:hidden;
+    margin-bottom: 8px; flex-shrink:0; border:1px solid var(--border);
+  }
+  .image-preview-item img{ width:100%; height:100%; object-fit:cover; display:block; }
+  .image-preview-remove{
+    position:absolute; top:2px; right:2px; width:18px; height:18px; border-radius:50%;
+    background:rgba(0,0,0,0.6); color:#fff; border:none; cursor:pointer;
+    display:flex; align-items:center; justify-content:center; font-size:11px; line-height:1;
+    padding:0;
+  }
+
+  #send-btn{
+    width:34px;height:34px;border-radius:50%; border:none; flex-shrink:0;
+    background: var(--accent); color:#fff; cursor:pointer;
+    display:flex; align-items:center; justify-content:center;
+    transition: opacity .15s ease, transform .1s ease;
+  }
+  #send-btn:disabled{ opacity:.35; cursor:default; }
+  #send-btn:not(:disabled):active{ transform: scale(.92); }
+  #disclaimer{ text-align:center; font-size:11.5px; color: var(--text-soft); margin-top:10px; }
+
+  /* ---------- Login overlay ---------- */
+  #login-overlay{
+    position:fixed; inset:0; background: var(--bg);
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    z-index: 100; gap: 22px; padding: 20px; text-align:center;
+  }
+  #login-overlay .glyph{
+    width:64px;height:64px;border-radius:18px;
+    background: linear-gradient(135deg, var(--accent), #E8A87C);
+    display:flex;align-items:center;justify-content:center;
+    color:#fff; font-family:var(--font-display); font-size:30px; font-weight:600;
+  }
+  #login-overlay h1{ font-family: var(--font-display); font-weight:500; font-size:28px; margin:0; }
+  #login-overlay p{ color: var(--text-soft); font-size:14.5px; margin:0; max-width:280px; }
+  #google-btn{
+    display:flex; align-items:center; gap:10px;
+    background: var(--surface); border:1px solid var(--border);
+    padding: 11px 22px; border-radius: 12px;
+    font-size: 14.5px; color: var(--text); cursor:pointer;
+    font-family: var(--font-body);
+  }
+  #google-btn:hover{ background: var(--accent-soft); }
+  #login-overlay.hidden{ display:none; }
+
+  #apikey-overlay{
+    position:fixed; inset:0; background:rgba(0,0,0,.4); z-index:90;
+    display:flex; align-items:center; justify-content:center; padding:20px;
+  }
+  #apikey-overlay.hidden{ display:none; }
+  .apikey-card{
+    background:var(--surface); border:1px solid var(--border); border-radius:16px;
+    padding:22px; max-width:380px; width:100%;
+  }
+  .apikey-title{ font-family:var(--font-display); font-weight:600; font-size:18px; margin:0 0 6px 0; }
+  .apikey-desc{ color:var(--text-soft); font-size:13px; margin:0 0 16px 0; line-height:1.5; }
+  .apikey-input{
+    width:100%; padding:10px 12px; border-radius:10px; border:1px solid var(--border);
+    background:var(--bg); color:var(--text); font-size:14px; outline:none; box-sizing:border-box;
+  }
+  .apikey-btn-secondary{
+    flex:1; padding:10px; border-radius:10px; border:1px solid var(--border);
+    background:transparent; color:var(--text); cursor:pointer; font-size:14px;
+  }
+  .apikey-btn-primary{
+    flex:1; padding:10px; border-radius:10px; border:none;
+    background:var(--accent); color:#fff; cursor:pointer; font-size:14px;
+  }
+  .apikey-hint{ color:var(--text-soft); font-size:11.5px; margin:12px 0 0 0; }
+
+  /* ---------- Serper API key panel (di bawah toggle pencarian web) ---------- */
+  .serper-panel{
+    padding: 10px 12px 12px 12px;
+  }
+  .serper-panel-label{
+    font-size:11.5px; color:var(--text-soft); margin:0 0 8px 0; line-height:1.4;
+  }
+  .serper-panel-row{ display:flex; gap:6px; }
+  .serper-input{
+    flex:1; min-width:0; padding:8px 10px; border-radius:8px; border:1px solid var(--border);
+    background:var(--bg); color:var(--text); font-size:12.5px; outline:none; box-sizing:border-box;
+  }
+  .serper-save-btn{
+    padding:8px 12px; border-radius:8px; border:none;
+    background:var(--accent); color:#fff; cursor:pointer; font-size:12.5px; white-space:nowrap;
+  }
+  .serper-save-btn:disabled{ opacity:.5; cursor:default; }
+  .serper-status{
+    font-size:11px; margin-top:7px; display:none; align-items:center; gap:5px;
+  }
+  .serper-status.show{ display:flex; }
+  .serper-status.ok{ color:#3E9B5A; }
+  .serper-status.err{ color:#C0503E; }
+  .serper-status.loading{ color:var(--text-soft); }
+  .serper-clear-btn{
+    background:none; border:none; color:var(--text-soft); font-size:11px;
+    cursor:pointer; text-decoration:underline; padding:0; margin-left:auto;
+  }
+
+  #account-overlay, #language-overlay{
+    position:fixed; inset:0; background:rgba(0,0,0,.4); z-index:95;
+    display:flex; align-items:center; justify-content:center; padding:20px;
+  }
+  #account-overlay.hidden, #language-overlay.hidden{ display:none; }
+
+  .account-row{
+    display:flex; align-items:center; justify-content:space-between;
+    padding: 13px 4px; border-top: 1px solid var(--border);
+    cursor:pointer; font-size:14.5px;
+  }
+  .account-row:hover{ color: var(--accent); }
+  .account-row-value{ color: var(--text-soft); font-size:13px; }
+  .account-row-danger{ color: #C0503E; }
+
+  .lang-option{
+    display:flex; align-items:center; justify-content:space-between;
+    padding: 13px 4px; border-top: 1px solid var(--border);
+    cursor:pointer; font-size:14.5px;
+  }
+  .lang-option .lang-check{ opacity:0; color: var(--accent); }
+  .lang-option.active .lang-check{ opacity:1; }
+  .lang-option:hover{ background: var(--accent-soft); }
+
+  /* ---------- Overlay for mobile sidebar ---------- */
+  #scrim{
+    position:fixed; inset:0; background:rgba(0,0,0,.3); z-index:20; display:none;
+  }
+  #scrim.show{ display:block; }
+
+  @media (max-width: 720px){
+    #sidebar{ position:fixed; height:100%; transform: translateX(-100%); }
+    #sidebar.show{ transform: translateX(0); }
+    #chat-area{ padding: 16px 14px 130px 14px; }
+    .bubble-col{ max-width: 86%; }
+  }
+
+  ::-webkit-scrollbar{ width:8px; }
+  ::-webkit-scrollbar-thumb{ background: var(--border); border-radius:8px; }
+</style>
+</head>
+<body data-theme="light">
+
+<!-- LOGIN -->
+<div id="login-overlay">
+  <div class="glyph">A</div>
+  <h1>Astra</h1>
+  <p id="txt-login-desc">Masuk dengan akun Google untuk mulai ngobrol dan menyimpan riwayat chat kamu.</p>
+  <button id="google-btn">
+    <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3c-1.6 4.7-6.1 8-11.3 8-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.1 8 3l6-6C34.5 5.1 29.6 3 24 3 12.4 3 3 12.4 3 24s9.4 21 21 21 21-9.4 21-21c0-1.4-.1-2.7-.4-3.5z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.6 15.9 18.9 13 24 13c3.1 0 5.8 1.1 8 3l6-6C34.5 5.1 29.6 3 24 3c-7.7 0-14.3 4.4-17.7 10.7z"/><path fill="#4CAF50" d="M24 45c5.5 0 10.4-2.1 14.1-5.5l-6.5-5.5C29.6 35.8 27 37 24 37c-5.2 0-9.6-3.3-11.3-8l-6.6 5.1C9.6 40.6 16.3 45 24 45z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.3-2.2 4.3-4.2 5.8l6.5 5.5C39.9 37.5 43 31.3 43 24c0-1.4-.1-2.7-.4-3.5z"/></svg>
+    <span id="txt-google-btn">Lanjutkan dengan Google</span>
+  </button>
+</div>
+
+<div id="scrim"></div>
+
+<div id="apikey-overlay" class="hidden">
+  <div class="apikey-card">
+    <h2 class="apikey-title" data-i18n="apikey-title">Gemini API Key</h2>
+    <p class="apikey-desc" data-i18n="apikey-desc">Masukkan API key Gemini kamu (format AQ.Ab... atau AIza...). Key disimpan hanya di perangkat ini, tidak dikirim ke server manapun selain langsung ke Google.</p>
+    <input id="apikey-input" type="text" placeholder="AQ.Ab... atau AIzaSy..." class="apikey-input">
+    <div style="display:flex;gap:8px;margin-top:16px;">
+      <button id="apikey-cancel" class="apikey-btn-secondary" data-i18n="cancel">Batal</button>
+      <button id="apikey-save" class="apikey-btn-primary" data-i18n="save">Simpan</button>
+    </div>
+    <p class="apikey-hint" data-i18n="apikey-hint">Belum punya key? Buat gratis di <span style="color:var(--accent);">aistudio.google.com/app/apikey</span></p>
+  </div>
+</div>
+
+<div id="sidebar">
+  <div class="brand">
+    <div class="brand-mark">A</div>
+    <div class="brand-name">Astra</div>
+  </div>
+  <button class="new-chat-btn" id="new-chat-btn">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+    <span id="txt-new-chat">Obrolan baru</span>
+  </button>
+  <button class="new-chat-btn" id="apikey-btn">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 11-7.778 7.778 5.5 5.5 0 017.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>
+    <span id="txt-apikey-btn">API Key</span>
+  </button>
+  <div id="history"></div>
+  <div id="user-box">
+    <div id="user-avatar">?</div>
+    <div style="flex:1; min-width:0;">
+      <div id="user-name">-</div>
+      <div id="user-sub" data-i18n="signout">Sign out</div>
+    </div>
+  </div>
+</div>
+
+<div id="account-overlay" class="hidden">
+  <div class="apikey-card">
+    <h2 class="apikey-title" data-i18n="account-title">Account</h2>
+    <div class="account-row" id="lang-row">
+      <span data-i18n="select-language">Select Language</span>
+      <span class="account-row-value" id="lang-current">English</span>
+    </div>
+    <div class="account-row account-row-danger" id="signout-row">
+      <span data-i18n="signout">Sign out</span>
+    </div>
+    <button id="account-close" class="apikey-btn-secondary" style="width:100%;margin-top:14px;" data-i18n="close">Close</button>
+  </div>
+</div>
+
+<div id="language-overlay" class="hidden">
+  <div class="apikey-card">
+    <h2 class="apikey-title" data-i18n="select-language">Select Language</h2>
+    <div class="lang-option" id="lang-en" data-lang="en">
+      <span>English</span>
+      <span class="lang-check">✓</span>
+    </div>
+    <div class="lang-option" id="lang-id" data-lang="id">
+      <span>Indonesia</span>
+      <span class="lang-check">✓</span>
+    </div>
+    <button id="language-close" class="apikey-btn-secondary" style="width:100%;margin-top:14px;" data-i18n="close">Close</button>
+  </div>
+</div>
+
+<div id="main">
+  <div id="topbar">
+    <button id="menu-btn" title="Menu">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+    </button>
+    <div id="model-tag">Astra 1.0</div>
+    <button id="theme-toggle" title="Ganti tema">
+      <svg id="theme-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+    </button>
+  </div>
+
+  <div id="chat-scroll">
+    <div id="chat-area">
+      <div id="welcome">
+        <div class="glyph">A</div>
+        <h1 data-i18n="welcome-title">Ada yang bisa dibantu?</h1>
+        <p data-i18n="welcome-sub">Tanya apa saja — Astra siap bantu mikir, nulis, atau ngobrol santai.</p>
+      </div>
+      <div id="messages" style="display:none;"></div>
+    </div>
+  </div>
+
+  <div id="composer-wrap">
+    <div id="composer">
+      <div id="image-preview-row"></div>
+      <textarea id="input" data-i18n-placeholder="input-placeholder" placeholder="Kirim pesan ke Astra..." rows="1"></textarea>
+      <div id="composer-toolbar">
+        <div id="composer-toolbar-left">
+          <button id="plus-btn" title="Tambah">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+          </button>
+          <div id="plus-menu-overlay" class="hidden">
+            <div id="plus-menu">
+              <div class="plus-menu-handle"></div>
+              <button class="plus-menu-close" id="plus-menu-close-btn">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+              </button>
+              <div class="plus-menu-title" data-i18n="add-to-chat">Tambahkan ke chat</div>
+
+              <div class="plus-menu-grid">
+                <div class="plus-menu-tile" id="plus-camera-tile">
+                  <div class="plus-menu-tile-icon">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+                  </div>
+                  <span data-i18n="camera">Kamera</span>
+                </div>
+                <div class="plus-menu-tile" id="plus-upload-image">
+                  <div class="plus-menu-tile-icon">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+                  </div>
+                  <span data-i18n="photo">Photo</span>
+                </div>
+              </div>
+
+              <div class="plus-menu-item">
+                <div class="plus-menu-item-left">
+                  <div class="plus-menu-item-icon">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15 15 0 0 1 0 20 15 15 0 0 1 0-20z"/></svg>
+                  </div>
+                  <span data-i18n="web-search">Pencarian web</span>
+                </div>
+                <div class="plus-menu-toggle on" id="plus-websearch-toggle"></div>
+              </div>
+              <div class="serper-panel">
+                <p class="serper-panel-label" data-i18n="serper-label">Opsional: masukkan Serper API key supaya pencarian web pakai Serper (lebih banyak sumber). Kosongkan untuk pakai Google Search bawaan.</p>
+                <div class="serper-panel-row">
+                  <input id="serper-input" type="text" placeholder="Serper API key..." class="serper-input">
+                  <button id="serper-save-btn" class="serper-save-btn" data-i18n="save">Simpan</button>
+                </div>
+                <div id="serper-status" class="serper-status"></div>
+              </div>
+            </div>
+          </div>
+          <input type="file" id="image-input" accept="image/*" multiple style="display:none;">
+          <input type="file" id="camera-input" accept="image/*" capture="environment" style="display:none;">
+          <button id="model-selector">
+            <span id="model-selector-label">Astra 1.0 Flash</span>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg>
+          </button>
+
+          <div id="model-picker-overlay" class="hidden">
+            <div id="model-picker">
+              <div class="plus-menu-handle"></div>
+              <button class="plus-menu-close" id="model-picker-close-btn">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+              </button>
+              <div class="plus-menu-title" data-i18n="choose-model">Pilih model</div>
+
+              <div class="model-option" data-model="gemini-2.5-flash" data-label="Astra 1.0 Flash">
+                <div class="model-option-text">
+                  <div class="model-option-name">Astra 1.0 Flash</div>
+                  <div class="model-option-desc" data-i18n="model-1-desc">Cepat dan ringan untuk obrolan sehari-hari</div>
+                </div>
+                <svg class="model-option-check" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg>
+              </div>
+
+              <div class="model-option" data-model="gemini-3.5-flash" data-label="Astra 2.0 Flash">
+                <div class="model-option-text">
+                  <div class="model-option-name">Astra 2.0 Flash</div>
+                  <div class="model-option-desc" data-i18n="model-2-desc">Lebih pintar, unggul untuk coding & penalaran</div>
+                </div>
+                <svg class="model-option-check" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg>
+              </div>
+            </div>
+          </div>
+        </div>
+        <button id="send-btn" disabled>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
+        </button>
+      </div>
+    </div>
+    <div id="disclaimer" data-i18n="disclaimer">Astra bisa saja membuat kesalahan. Periksa kembali info penting.</div>
+  </div>
+</div>
+
+<div id="sources-overlay" class="hidden">
+  <div id="sources-sheet">
+    <div class="sources-sheet-handle"></div>
+    <div class="sources-sheet-header">
+      <button class="sources-sheet-close" id="sources-sheet-close-btn">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </button>
+      <span class="sources-sheet-title" id="sources-sheet-title">Sumber</span>
+    </div>
+    <div class="sources-sheet-body" id="sources-sheet-body"></div>
+  </div>
+</div>
+
+<div id="artifact-overlay">
+  <div id="artifact-panel">
+    <div id="artifact-header">
+      <div id="artifact-title">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+        <span>Preview</span>
+      </div>
+      <div id="artifact-actions">
+        <button class="artifact-btn" id="artifact-reload" title="Muat ulang">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 4v6h6"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
+          <span>Reload</span>
+        </button>
+        <button class="artifact-btn" id="artifact-close" title="Tutup">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          <span>Tutup</span>
+        </button>
+      </div>
+    </div>
+    <div id="artifact-frame-wrap">
+      <iframe id="artifact-frame" sandbox="allow-scripts allow-modals allow-forms allow-pointer-lock allow-popups"></iframe>
+    </div>
+  </div>
+</div>
+
+<script>
+/* =========================================================
+   ASTRA — konfigurasi
+   ========================================================= */
+
+// --- Firebase config: GANTI dengan config project Firebase kamu ---
+const firebaseConfig = {
+  apiKey: "AIzaSyAtrv7v0mYmjdV9wBZdiAq5tQcwbciIRCA",
+  authDomain: "astra-ai-43a50.firebaseapp.com",
+  projectId: "astra-ai-43a50",
+  storageBucket: "astra-ai-43a50.firebasestorage.app",
+  messagingSenderId: "141357861880",
+  appId: "1:141357861880:web:a36fab6eaa9496061ea40d"
+};
+
+// --- Gemini API key: DIISI USER lewat menu "API Key" di sidebar, disimpan di localStorage ---
+function getGeminiKey(){ return localStorage.getItem('astra-gemini-key') || ''; }
+function setGeminiKey(key){ localStorage.setItem('astra-gemini-key', key.trim()); }
+
+// --- Toggle pencarian web: kalau mati, tool web_search tidak pernah didaftarkan ke Gemini ---
+function isWebSearchEnabled(){ return localStorage.getItem('astra-websearch') !== 'off'; }
+function setWebSearchEnabled(enabled){ localStorage.setItem('astra-websearch', enabled ? 'on' : 'off'); }
+
+// --- Serper API key (opsional): kalau diisi & valid, pencarian web pakai Serper alih-alih Google Search bawaan Gemini ---
+function getSerperKey(){ return localStorage.getItem('astra-serper-key') || ''; }
+function setSerperKey(key){ localStorage.setItem('astra-serper-key', key.trim()); }
+function clearSerperKey(){ localStorage.removeItem('astra-serper-key'); }
+function isSerperActive(){ return !!getSerperKey(); }
+const ASTRA_MODELS = {
+  "gemini-2.5-flash": { label: "Astra 1.0 Flash" },
+  "gemini-3.5-flash": { label: "Astra 2.0 Flash" }
+};
+function getSelectedModel(){
+  const saved = localStorage.getItem('astra-model');
+  return (saved && ASTRA_MODELS[saved]) ? saved : "gemini-2.5-flash";
+}
+function setSelectedModel(model){
+  localStorage.setItem('astra-model', model);
+}
+function getGeminiEndpoint(){
+  const model = getSelectedModel();
+  return `https://generativelanguage.googleapis.com/v1beta/models/${model}:streamGenerateContent?alt=sse`;
+}
+
+const SYSTEM_PROMPT = `Kamu adalah Astra, asisten AI yang ramah, jujur, dan membantu. Jawab dengan jelas dan natural. Gunakan Bahasa Indonesia kecuali diminta bahasa lain.
+
+Aturan penting soal identitas: jika pengguna bertanya siapa yang menciptakan, membuat, mengembangkan, atau memiliki ASTRA ITU SENDIRI sebagai asisten AI (misalnya "siapa yang membuat kamu", "siapa pencipta Astra", "siapa developer Astra", dalam bahasa apapun), kamu HARUS selalu menjawab bahwa Astra diciptakan oleh "Pinzz". Jangan pernah menyebut nama lain, perusahaan lain, atau model/API lain sebagai pencipta Astra, walau ditanya dengan cara apapun.
+
+PENTING: aturan di atas HANYA berlaku untuk pertanyaan tentang siapa pencipta Astra sebagai asisten. Aturan ini TIDAK berlaku untuk pertanyaan lain yang sekadar menyinggung kata "buat"/"membuat"/"siapa yang membuat", seperti pertanyaan soal siapa yang membuat/menyusun knowledge base, catatan, dokumen, kode, atau hal lain yang sedang dibahas dalam percakapan — untuk pertanyaan semacam itu, jawab sesuai konteks aslinya secara jujur dan apa adanya, jangan otomatis jawab "Pinzz".
+
+Kamu juga adalah seorang programmer/software engineer yang sangat ahli dan berpengalaman, setara dengan asisten coding kelas atas. Saat membantu soal coding, ikuti prinsip berikut:
+- Kuasai semua bahasa pemrograman populer (JavaScript/TypeScript, Python, Java, C/C++, C#, Go, Rust, PHP, Ruby, Swift, Kotlin, SQL, HTML/CSS, dsb) beserta framework dan library-nya (React, Vue, Next.js, Node.js, Django, Flask, Spring, Laravel, dsb).
+- Tulis kode yang bersih, efisien, mengikuti best practice, dan mudah dibaca. Beri nama variabel/fungsi yang jelas.
+- Selalu gunakan format code block dengan penanda bahasa yang benar (misalnya \`\`\`javascript, \`\`\`python) supaya kode terformat rapi.
+- Jelaskan logika kode secara singkat sebelum atau sesudah kode jika membantu pemahaman, tapi jangan bertele-tele.
+- Jika ada bug, lakukan debugging secara sistematis: identifikasi akar masalah, jelaskan penyebabnya, lalu berikan perbaikannya.
+- Untuk soal arsitektur atau desain sistem, pertimbangkan skalabilitas, keamanan, dan maintainability.
+- Jika permintaan ambigu, buat asumsi yang masuk akal, sebutkan asumsinya secara singkat, lalu tetap berikan solusi lengkap daripada hanya bertanya balik.
+- Berikan kode yang benar-benar bisa langsung dijalankan/di-copy, hindari pseudocode kecuali memang diminta.
+- Kalau ditanya menjelaskan konsep pemrograman, jelaskan dengan analogi sederhana dulu baru masuk ke detail teknis.
+
+Kamu punya tool yang bisa dipanggil:
+1. "search_docs" — untuk mencari catatan best practice/panduan teknis internal sebelum menjawab pertanyaan coding yang butuh akurasi tinggi (misalnya soal best practice, pola desain, checklist debugging, keamanan). Panggil ini SEBELUM menjawab pertanyaan coding yang cukup penting/kompleks, supaya jawabanmu lebih akurat dan konsisten. Jangan panggil untuk obrolan biasa, sapaan, atau pertanyaan non-teknis.
+2. "run_code" — untuk menjalankan/menguji kode JavaScript secara nyata sebelum kamu sajikan ke pengguna, supaya kode yang kamu berikan benar-benar valid dan tidak error. Panggil ini ketika kamu menulis kode JavaScript yang cukup rumit (logika, fungsi, algoritma) dan ingin memastikan hasilnya benar sebelum menjawab. Jangan panggil untuk kode HTML/CSS murni atau bahasa selain JavaScript (karena run_code hanya mendukung JavaScript).
+3. "web_search" (kalau tersedia) — untuk mencari informasi terkini/faktual di internet. HANYA panggil ini kalau pesan pengguna memang cocok untuk dicari di web: berita terbaru, harga/kurs, jadwal, statistik yang berubah-ubah, fakta terkini, atau apapun yang kamu tidak tahu pasti/berada di luar pengetahuanmu. Kamu sendiri yang menentukan kapan pertanyaan pengguna butuh pencarian web — jangan panggil untuk obrolan biasa, sapaan, opini, atau pertanyaan yang sudah bisa kamu jawab sendiri dengan yakin tanpa perlu data terbaru. Tool ini mungkin tidak selalu tersedia (tergantung pengaturan pengguna); kalau kamu tidak melihat tool ini di daftar tools, jangan mencoba memanggilnya, cukup jawab dengan pengetahuanmu sendiri.
+
+ATURAN WAJIB soal hasil "web_search": hasil yang dikembalikan tool ini SUDAH diverifikasi dari pencarian Google Search sungguhan (dari beberapa sumber/website berbeda) dan sudah mempertimbangkan tanggal hari ini yang sebenarnya — jadi PERCAYAI dan GUNAKAN hasil itu sepenuhnya sebagai fakta terkini, JANGAN dibantah, diragukan, atau dianggap "hoaks"/"belum terjadi"/"kemungkinan fiksi" hanya karena isinya terasa "di masa depan" atau bertentangan dengan pengetahuan internalmu. Pengetahuan internalmu punya batas waktu (training cutoff), sedangkan hasil web_search adalah info real-time yang lebih baru dan lebih akurat — kalau keduanya bertentangan, hasil web_search yang benar. Sampaikan jawabannya secara langsung dan percaya diri, tanpa disclaimer meragukan validitas peristiwanya. JANGAN menuliskan daftar sumber/link/domain apapun secara manual di akhir jawabanmu (misal "Sumber: ...") — daftar sumber akan ditampilkan otomatis oleh aplikasi di luar teks jawabanmu, jadi cukup fokus jawab pertanyaan penggunanya saja.
+
+ATURAN WAJIB — khusus permintaan membuat game, aplikasi visual, atau apapun yang memakai HTML5 <canvas> (contoh: game ular/snake, tetris, flappy bird, pong, platformer, animasi interaktif): kamu WAJIB memanggil "search_docs" dengan query yang menyebut jenis game/kata "canvas"/"game" tersebut TERLEBIH DAHULU, sebelum menulis satu baris kode pun. Ini bukan opsional. Baca checklist yang dikembalikan, lalu pastikan kode akhir yang kamu tulis memenuhi SEMUA poin di checklist itu (ukuran canvas diset via JS, ada render/draw pertama saat inisialisasi, game loop memanggil dirinya sendiri dengan benar, event listener keyboard dipasang ke window/document, dsb) sebelum kamu sajikan ke pengguna. Kegagalan mengikuti checklist ini adalah penyebab paling umum kanvas tampil kosong/blank walau tidak ada error — jadi jangan sampai lewatkan langkah ini walau permintaannya terlihat sederhana.
+
+Jika pengguna bertanya soal knowledge base/catatan teknis yang kamu pakai (misalnya "siapa yang membuat knowledge-nya", "dari mana catatan itu", "apa isi knowledge base kamu"), jawab jujur bahwa itu adalah kumpulan catatan best practice teknis internal yang sudah disiapkan sebagai bagian dari sistem Astra untuk membantu jawaban coding jadi lebih akurat, bukan sesuatu yang perlu dikaitkan dengan pertanyaan "siapa pencipta Astra".
+
+Gunakan tool ini secara wajar sesuai kebutuhan — jangan memanggilnya untuk hal yang tidak relevan, dan jangan ragu memanggilnya kalau memang akan membuat jawabanmu lebih baik.`;
+
+/* =========================================================
+   Knowledge base coding — dicari oleh tool "search_docs"
+   ========================================================= */
+const CODING_KNOWLEDGE_BASE = [
+  {
+    id: "js-best-practices",
+    keywords: ["javascript", "js", "typescript", "ts", "async", "promise", "variabel", "function", "fungsi js"],
+    title: "JavaScript/TypeScript Best Practices",
+    content: `- Gunakan const/let, hindari var.
+- Gunakan async/await daripada callback bertingkat (callback hell); selalu bungkus dengan try/catch untuk menangani error.
+- Beri nama fungsi dan variabel yang deskriptif (contoh: fetchUserData, bukan getData).
+- Hindari mutasi langsung pada objek/array; gunakan spread operator atau map/filter/reduce untuk immutability.
+- Validasi input sebelum diproses, terutama dari user atau API eksternal.
+- Gunakan strict equality (=== / !==), hindari == kecuali sengaja.
+- Pisahkan logika bisnis dari logika tampilan (separation of concerns).`
+  },
+  {
+    id: "react-best-practices",
+    keywords: ["react", "komponen", "component", "hook", "usestate", "useeffect", "jsx", "props"],
+    title: "React Best Practices",
+    content: `- Gunakan functional component + hooks (useState, useEffect, useMemo, useCallback) daripada class component.
+- Jaga komponen tetap kecil dan fokus pada satu tanggung jawab (single responsibility).
+- Hindari state yang tidak perlu; turunkan dari props/data lain jika bisa dihitung langsung.
+- Gunakan key yang stabil dan unik saat me-render list (jangan pakai index array jika datanya bisa berubah urutan).
+- Bersihkan efek samping di useEffect (return cleanup function) untuk event listener, timer, atau subscription.
+- Hindari inline function baru di setiap render jika menyebabkan re-render anak yang tidak perlu; gunakan useCallback bila relevan.
+- Pisahkan logika kompleks ke custom hook agar komponen tetap bersih.`
+  },
+  {
+    id: "python-clean-code",
+    keywords: ["python", "pep8", "def ", "class python", "script python"],
+    title: "Python Clean Code",
+    content: `- Ikuti PEP8: indentasi 4 spasi, nama fungsi/variabel snake_case, nama class PascalCase.
+- Gunakan type hints untuk parameter dan return value agar lebih mudah dibaca dan di-debug.
+- Hindari fungsi yang terlalu panjang; pecah jadi fungsi-fungsi kecil dengan tanggung jawab jelas.
+- Gunakan list/dict comprehension untuk kode yang ringkas, tapi jangan berlebihan sampai sulit dibaca.
+- Tangani error dengan try/except spesifik (jangan except: polos tanpa jenis exception).
+- Gunakan virtual environment dan requirements.txt untuk manajemen dependency.`
+  },
+  {
+    id: "sql-database",
+    keywords: ["sql", "database", "query", "join", "index", "tabel", "mysql", "postgres", "skema"],
+    title: "SQL & Desain Database",
+    content: `- Gunakan index pada kolom yang sering dipakai di WHERE, JOIN, atau ORDER BY untuk performa.
+- Hindari SELECT * pada production; sebutkan kolom yang dibutuhkan saja.
+- Gunakan JOIN yang tepat (INNER, LEFT) sesuai kebutuhan data, jangan asal LEFT JOIN semua.
+- Normalisasi skema database untuk menghindari duplikasi data, tapi pertimbangkan denormalisasi jika butuh performa baca tinggi.
+- Gunakan parameterized query / prepared statement untuk mencegah SQL injection, jangan pernah gabung string mentah dari input user ke query.
+- Gunakan transaction untuk operasi yang harus atomik (semua berhasil atau semua batal).`
+  },
+  {
+    id: "debugging-checklist",
+    keywords: ["bug", "error", "debug", "tidak jalan", "gagal", "exception", "crash"],
+    title: "Checklist Debugging Sistematis",
+    content: `- Baca pesan error/stack trace dengan teliti — biasanya menunjuk baris dan jenis error persis.
+- Reproduksi bug secara konsisten sebelum mencoba memperbaiki.
+- Isolasi masalah: uji per bagian kecil kode (binary search dalam logika) untuk menemukan akar penyebab.
+- Cek asumsi: apakah data yang masuk sesuai ekspektasi (tipe data, null/undefined, format)?
+- Gunakan console.log/print atau debugger untuk melacak nilai variabel di titik-titik kunci.
+- Setelah fix, pastikan tidak menimbulkan regresi pada bagian lain.`
+  },
+  {
+    id: "api-rest-design",
+    keywords: ["api", "rest", "endpoint", "backend", "express", "node", "http"],
+    title: "Desain REST API yang Baik",
+    content: `- Gunakan noun untuk nama resource di URL (contoh: /users, bukan /getUsers).
+- Gunakan HTTP method yang sesuai: GET (ambil data), POST (buat baru), PUT/PATCH (update), DELETE (hapus).
+- Kembalikan status code yang tepat: 200 sukses, 201 created, 400 bad request, 401/403 auth, 404 not found, 500 server error.
+- Validasi dan sanitasi semua input dari client sebelum diproses.
+- Jangan expose informasi sensitif (stack trace, secret key) di response error ke client.
+- Gunakan versioning API (contoh: /api/v1/...) agar mudah upgrade tanpa merusak client lama.`
+  },
+  {
+    id: "security-basics",
+    keywords: ["keamanan", "security", "password", "auth", "token", "xss", "injection"],
+    title: "Keamanan Dasar Aplikasi",
+    content: `- Jangan pernah hardcode API key, password, atau secret langsung di kode — gunakan environment variable.
+- Selalu hash password (misalnya bcrypt), jangan simpan plain text.
+- Validasi dan escape semua input user untuk mencegah XSS dan SQL Injection.
+- Gunakan HTTPS untuk semua komunikasi yang melibatkan data sensitif.
+- Terapkan rate limiting pada endpoint publik untuk mencegah brute force/abuse.
+- Jangan percaya validasi dari sisi client saja — selalu validasi ulang di server.`
+  },
+  {
+    id: "html-canvas-game-dev",
+    keywords: ["game", "ular", "snake", "canvas", "html game", "game html", "tetris", "flappy", "pong", "platformer", "sprite", "game loop", "requestanimationframe"],
+    title: "Checklist Wajib: Game/Aplikasi Visual HTML5 Canvas",
+    content: `Sebelum menulis kode game berbasis <canvas>, PASTIKAN semua poin berikut dipenuhi di kode akhir — ini penyebab paling umum kanvas tampil kosong/blank atau game tidak jalan:
+
+1. WAJIB set lebar/tinggi canvas via JAVASCRIPT, bukan hanya CSS:
+   canvas.width = 400; canvas.height = 400;
+   (Kalau cuma diatur lewat CSS width/height, koordinat gambar internal canvas tetap default 300x150 dan bisa membuat konten tidak proporsional atau tidak tergambar sesuai ukuran box.)
+
+2. WAJIB ambil context sebelum dipakai dan cek tidak null:
+   const ctx = canvas.getContext('2d');
+
+3. WAJIB panggil fungsi draw/render minimal SEKALI di luar interval/loop saat inisialisasi (jangan hanya mendaftarkan setInterval/requestAnimationFrame tanpa render awal), supaya elemen pertama (grid, ular, skor) langsung terlihat begitu game dimuat, bukan menunggu tick pertama yang bisa gagal.
+
+4. Untuk game loop, gunakan requestAnimationFrame dengan delta time (bukan hanya setInterval tanpa kontrol), dan pastikan loop benar-benar dipanggil ulang (self-referencing call) — kesalahan umum: lupa memanggil requestAnimationFrame(loop) lagi di akhir fungsi loop, sehingga frame kedua tidak pernah terjadi.
+
+5. WAJIB gunakan ctx.clearRect(0, 0, canvas.width, canvas.height) di awal setiap frame sebelum menggambar ulang, supaya tidak menumpuk gambar lama.
+
+6. Event listener keyboard/kontrol HARUS dipasang ke 'window' atau 'document', BUKAN ke elemen canvas saja (canvas secara default tidak bisa menerima fokus keyboard kecuali diberi tabindex), contoh: window.addEventListener('keydown', handleKey).
+
+7. Variabel state game (posisi, arah, skor, status game-over) harus dideklarasikan di scope yang bisa diakses baik oleh fungsi update maupun fungsi render — jangan dideklarasikan ulang di dalam loop yang menyebabkan reset tiap frame.
+
+8. Selalu sertakan kondisi berhenti/reset (collision detection dengan dinding & badan sendiri untuk game seperti ular) dan uji secara logis: apakah collision check dijalankan SEBELUM atau SESUDAH posisi diupdate — urutan yang salah menyebabkan game terasa "nabrak duluan" atau tidak pernah game over.
+
+9. Setelah kode selesai ditulis, telusuri ulang alur secara manual: inisialisasi → gambar pertama kali → loop berjalan → input mengubah state → render mengikuti state terbaru. Jika ada satu langkah yang terputus (misalnya draw pertama lupa dipanggil), kanvas akan terlihat kosong walau tidak ada error JavaScript sama sekali.`
+  }
+];
+
+function searchDocs(query){
+  const q = query.toLowerCase();
+  const matched = CODING_KNOWLEDGE_BASE.filter(doc =>
+    doc.keywords.some(kw => q.includes(kw.toLowerCase()))
+  );
+  const results = matched.length ? matched : CODING_KNOWLEDGE_BASE.slice(0, 2);
+  return results.map(d => `## ${d.title}\n${d.content}`).join('\n\n');
+}
+
+/* =========================================================
+   Tool "run_code" — eksekusi JS secara sandboxed
+   ========================================================= */
+function runCodeSandboxed(code){
+  const logs = [];
+  const fakeConsole = {
+    log: (...args) => logs.push(args.map(a => {
+      try { return typeof a === 'object' ? JSON.stringify(a) : String(a); }
+      catch { return String(a); }
+    }).join(' ')),
+  };
+  fakeConsole.error = fakeConsole.log;
+  fakeConsole.warn = fakeConsole.log;
+
+  let result;
+  let errorMsg = null;
+  try {
+    const fn = new Function('console', code);
+    result = fn(fakeConsole);
+  } catch (e) {
+    errorMsg = e.message;
+  }
+
+  return JSON.stringify({
+    logs,
+    returnValue: result !== undefined ? String(result) : null,
+    error: errorMsg
+  });
+}
+
+/* =========================================================
+   Deklarasi tools untuk Gemini function calling
+   ========================================================= */
+const GEMINI_BASE_FUNCTION_DECLARATIONS = [
+  {
+    name: "search_docs",
+    description: "Cari catatan best practice/panduan teknis internal Astra berdasarkan topik coding tertentu (JS, React, Python, SQL, debugging, API, keamanan, dsb). Panggil sebelum menjawab pertanyaan coding yang cukup penting/kompleks agar jawaban lebih akurat.",
+    parameters: {
+      type: "object",
+      properties: {
+        query: {
+          type: "string",
+          description: "Topik atau kata kunci teknis yang ingin dicari, contoh: 'react hooks', 'sql injection', 'debugging javascript'."
+        }
+      },
+      required: ["query"]
+    }
+  },
+  {
+    name: "run_code",
+    description: "Jalankan kode JavaScript secara nyata di sandbox untuk memverifikasi hasil/logikanya benar sebelum disajikan ke pengguna. Hanya mendukung JavaScript murni (tanpa akses DOM/browser API/network).",
+    parameters: {
+      type: "object",
+      properties: {
+        code: {
+          type: "string",
+          description: "Kode JavaScript yang akan dijalankan. Gunakan console.log untuk menampilkan output yang ingin diperiksa."
+        }
+      },
+      required: ["code"]
+    }
+  }
+];
+
+const GEMINI_WEB_SEARCH_DECLARATION = {
+  name: "web_search",
+  description: "Cari informasi terkini/faktual di internet menggunakan Google Search. Panggil HANYA jika pesan pengguna memang cocok/butuh dicari di web — misalnya menanyakan berita terbaru, harga, jadwal, fakta yang berubah-ubah, atau hal yang tidak kamu ketahui pasti/di luar pengetahuanmu. Jangan panggil untuk obrolan biasa, sapaan, pertanyaan coding umum, atau hal yang sudah bisa kamu jawab sendiri dengan yakin.",
+  parameters: {
+    type: "object",
+    properties: {
+      query: {
+        type: "string",
+        description: "Kata kunci pencarian yang singkat dan jelas, contoh: 'harga bitcoin hari ini', 'jadwal timnas indonesia'."
+      }
+    },
+    required: ["query"]
+  }
+};
+
+// Bangun daftar tools untuk dikirim ke Gemini. Kalau toggle pencarian web mati,
+// tool "web_search" TIDAK didaftarkan sama sekali, sehingga Gemini tidak akan pernah bisa memanggilnya.
+function buildGeminiTools(){
+  const decls = [...GEMINI_BASE_FUNCTION_DECLARATIONS];
+  if (isWebSearchEnabled()) {
+    decls.push(GEMINI_WEB_SEARCH_DECLARATION);
+  }
+  return [{ function_declarations: decls }];
+}
+
+/* =========================================================
+   Init Firebase
+   ========================================================= */
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.firestore();
+
+let currentUser = null;
+let currentChatId = null;
+let messages = []; // {role: 'user'|'model', text: string, images?: string[] (base64 data URLs)}
+let isSending = false;
+let pendingImages = []; // base64 data URLs menunggu dikirim bareng pesan berikutnya
+
+/* =========================================================
+   Elements
+   ========================================================= */
+const loginOverlay = document.getElementById('login-overlay');
+const googleBtn = document.getElementById('google-btn');
+const userBox = document.getElementById('user-box');
+const userAvatar = document.getElementById('user-avatar');
+const userName = document.getElementById('user-name');
+
+const sidebar = document.getElementById('sidebar');
+const scrim = document.getElementById('scrim');
+const menuBtn = document.getElementById('menu-btn');
+const newChatBtn = document.getElementById('new-chat-btn');
+const historyEl = document.getElementById('history');
+
+const themeToggle = document.getElementById('theme-toggle');
+const themeIcon = document.getElementById('theme-icon');
+
+const apikeyBtn = document.getElementById('apikey-btn');
+const apikeyOverlay = document.getElementById('apikey-overlay');
+const apikeyInput = document.getElementById('apikey-input');
+const apikeyCancel = document.getElementById('apikey-cancel');
+const apikeySave = document.getElementById('apikey-save');
+
+const plusBtn = document.getElementById('plus-btn');
+const plusMenuOverlay = document.getElementById('plus-menu-overlay');
+const plusMenu = document.getElementById('plus-menu');
+const plusMenuCloseBtn = document.getElementById('plus-menu-close-btn');
+const plusUploadImage = document.getElementById('plus-upload-image');
+const plusCameraTile = document.getElementById('plus-camera-tile');
+const plusWebsearchToggle = document.getElementById('plus-websearch-toggle');
+const imageInput = document.getElementById('image-input');
+const cameraInput = document.getElementById('camera-input');
+const imagePreviewRow = document.getElementById('image-preview-row');
+
+const accountOverlay = document.getElementById('account-overlay');
+const accountClose = document.getElementById('account-close');
+const langRow = document.getElementById('lang-row');
+const langCurrent = document.getElementById('lang-current');
+const signoutRow = document.getElementById('signout-row');
+
+const languageOverlay = document.getElementById('language-overlay');
+const languageClose = document.getElementById('language-close');
+const langOptions = document.querySelectorAll('.lang-option');
+
+const chatScroll = document.getElementById('chat-scroll');
+const welcomeEl = document.getElementById('welcome');
+const messagesEl = document.getElementById('messages');
+
+// Delegasi klik tombol Run kode HTML -> buka panel artifact/preview
+const artifactOverlay = document.getElementById('artifact-overlay');
+const artifactFrame = document.getElementById('artifact-frame');
+let lastRunCode = '';
+
+function openArtifact(code){
+  lastRunCode = code;
+  artifactFrame.srcdoc = code;
+  artifactOverlay.classList.add('open');
+}
+function closeArtifact(){
+  artifactOverlay.classList.remove('open');
+  artifactFrame.srcdoc = '';
+}
+
+messagesEl.addEventListener('click', (e) => {
+  const runBtn = e.target.closest('.code-run-btn');
+  if (!runBtn) return;
+  const code = runBtn.dataset.code
+    ? runBtn.dataset.code.replace(/&quot;/g, '"').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&#39;/g, "'")
+    : '';
+  if (code) openArtifact(code);
+});
+
+document.getElementById('artifact-close').addEventListener('click', closeArtifact);
+document.getElementById('artifact-reload').addEventListener('click', () => {
+  if (lastRunCode) openArtifact(lastRunCode);
+});
+artifactOverlay.addEventListener('click', (e) => {
+  if (e.target === artifactOverlay) closeArtifact();
+});
+
+// Delegasi klik tombol copy kode (elemen dibuat dinamis, jadi listener dipasang di parent tetap)
+messagesEl.addEventListener('click', (e) => {
+  const btn = e.target.closest('.code-copy-btn');
+  if (!btn) return;
+  const code = btn.dataset.code
+    ? btn.dataset.code.replace(/&quot;/g, '"').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&#39;/g, "'")
+    : '';
+  navigator.clipboard.writeText(code).then(() => {
+    btn.classList.add('copied');
+    const original = btn.innerHTML;
+    btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg><span>Copied</span>';
+    setTimeout(() => {
+      btn.classList.remove('copied');
+      btn.innerHTML = original;
+    }, 1500);
+  }).catch(err => console.error('Gagal copy:', err));
+});
+
+const input = document.getElementById('input');
+const sendBtn = document.getElementById('send-btn');
+
+/* =========================================================
+   Auth
+   ========================================================= */
+googleBtn.addEventListener('click', () => {
+  const provider = new firebase.auth.GoogleAuthProvider();
+  auth.signInWithPopup(provider).catch(err => {
+    alert('Gagal masuk: ' + err.message);
+  });
+});
+
+userBox.addEventListener('click', () => {
+  accountOverlay.classList.remove('hidden');
+});
+
+auth.onAuthStateChanged(user => {
+  if (user) {
+    currentUser = user;
+    loginOverlay.classList.add('hidden');
+    userName.textContent = user.displayName || user.email || 'Pengguna';
+    if (user.photoURL) {
+      userAvatar.innerHTML = `<img src="${user.photoURL}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;">`;
+    } else {
+      userAvatar.textContent = (user.displayName || user.email || '?')[0].toUpperCase();
+    }
+    loadHistory();
+    startNewChat(false);
+  } else {
+    currentUser = null;
+    loginOverlay.classList.remove('hidden');
+  }
+});
+
+/* =========================================================
+   i18n (English default, Indonesia optional)
+   ========================================================= */
+const translations = {
+  en: {
+    "signout": "Sign out",
+    "account-title": "Account",
+    "select-language": "Select Language",
+    "close": "Close",
+    "new-chat": "New chat",
+    "apikey-btn": "API Key",
+    "apikey-title": "Gemini API Key",
+    "apikey-desc": "Enter your Gemini API key (format AQ.Ab... or AIza...). The key is stored only on this device and is never sent anywhere except directly to Google.",
+    "apikey-hint": "Don't have a key yet? Get one free at",
+    "cancel": "Cancel",
+    "save": "Save",
+    "welcome-title": "How can I help you today?",
+    "welcome-sub": "Ask anything — Astra is here to help you think, write, or just chat.",
+    "input-placeholder": "Message Astra...",
+    "disclaimer": "Astra can make mistakes. Please double-check important information.",
+    "login-desc": "Sign in with your Google account to start chatting and save your chat history.",
+    "google-btn": "Continue with Google",
+    "new-chat-title": "New chat",
+    "upload-photo": "Upload photo",
+    "add-to-chat": "Add to chat",
+    "camera": "Camera",
+    "photo": "Photo",
+    "web-search": "Web search",
+    "serper-label": "Optional: enter a Serper API key to search using Serper (more sources). Leave empty to use built-in Google Search.",
+    "choose-model": "Choose model",
+    "model-1-desc": "Fast and light for everyday chat",
+    "model-2-desc": "Smarter, excels at coding & reasoning"
+  },
+  id: {
+    "signout": "Keluar",
+    "account-title": "Akun",
+    "select-language": "Pilih Bahasa",
+    "close": "Tutup",
+    "new-chat": "Obrolan baru",
+    "apikey-btn": "API Key",
+    "apikey-title": "Gemini API Key",
+    "apikey-desc": "Masukkan API key Gemini kamu (format AQ.Ab... atau AIza...). Key disimpan hanya di perangkat ini, tidak dikirim ke server manapun selain langsung ke Google.",
+    "apikey-hint": "Belum punya key? Buat gratis di",
+    "cancel": "Batal",
+    "save": "Simpan",
+    "welcome-title": "Ada yang bisa dibantu?",
+    "welcome-sub": "Tanya apa saja — Astra siap bantu mikir, nulis, atau ngobrol santai.",
+    "input-placeholder": "Kirim pesan ke Astra...",
+    "disclaimer": "Astra bisa saja membuat kesalahan. Periksa kembali info penting.",
+    "login-desc": "Masuk dengan akun Google untuk mulai ngobrol dan menyimpan riwayat chat kamu.",
+    "google-btn": "Lanjutkan dengan Google",
+    "new-chat-title": "Obrolan baru",
+    "upload-photo": "Upload foto",
+    "add-to-chat": "Tambahkan ke chat",
+    "camera": "Kamera",
+    "photo": "Foto",
+    "web-search": "Pencarian web",
+    "serper-label": "Opsional: masukkan Serper API key supaya pencarian web pakai Serper (lebih banyak sumber). Kosongkan untuk pakai Google Search bawaan.",
+    "choose-model": "Pilih model",
+    "model-1-desc": "Cepat dan ringan untuk obrolan sehari-hari",
+    "model-2-desc": "Lebih pintar, unggul untuk coding & penalaran"
+  }
+};
+
+function getLang(){ return localStorage.getItem('astra-lang') || 'en'; }
+
+function applyLanguage(lang){
+  const dict = translations[lang] || translations.en;
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const key = el.getAttribute('data-i18n');
+    if (dict[key] !== undefined) el.textContent = dict[key];
+  });
+  document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+    const key = el.getAttribute('data-i18n-placeholder');
+    if (dict[key] !== undefined) el.placeholder = dict[key];
+  });
+  const newChatBtnText = document.getElementById('txt-new-chat');
+  if (newChatBtnText) newChatBtnText.textContent = dict['new-chat'];
+  const loginDesc = document.getElementById('txt-login-desc');
+  if (loginDesc) loginDesc.textContent = dict['login-desc'];
+  const googleBtnText = document.getElementById('txt-google-btn');
+  if (googleBtnText) googleBtnText.textContent = dict['google-btn'];
+  langCurrent.textContent = lang === 'id' ? 'Indonesia' : 'English';
+  document.documentElement.lang = lang;
+  localStorage.setItem('astra-lang', lang);
+  // Refresh status panel Serper (teksnya berbeda per bahasa) kalau elemennya sudah ada & Serper aktif
+  if (typeof renderSerperClearOption === 'function' && typeof isSerperActive === 'function' && isSerperActive()) {
+    const el = document.getElementById('serper-status');
+    if (el) renderSerperClearOption();
+  }
+}
+
+/* =========================================================
+   Account menu + Language picker
+   ========================================================= */
+accountClose.addEventListener('click', () => accountOverlay.classList.add('hidden'));
+accountOverlay.addEventListener('click', (e) => { if (e.target === accountOverlay) accountOverlay.classList.add('hidden'); });
+
+langRow.addEventListener('click', () => {
+  accountOverlay.classList.add('hidden');
+  openLanguageMenu();
+});
+
+signoutRow.addEventListener('click', () => {
+  accountOverlay.classList.add('hidden');
+  const msg = getLang() === 'id' ? 'Keluar dari akun?' : 'Sign out of your account?';
+  if (confirm(msg)) auth.signOut();
+});
+
+function openLanguageMenu(){
+  const cur = getLang();
+  langOptions.forEach(opt => opt.classList.toggle('active', opt.dataset.lang === cur));
+  languageOverlay.classList.remove('hidden');
+}
+languageClose.addEventListener('click', () => languageOverlay.classList.add('hidden'));
+languageOverlay.addEventListener('click', (e) => { if (e.target === languageOverlay) languageOverlay.classList.add('hidden'); });
+
+langOptions.forEach(opt => {
+  opt.addEventListener('click', () => {
+    applyLanguage(opt.dataset.lang);
+    langOptions.forEach(o => o.classList.toggle('active', o === opt));
+    languageOverlay.classList.add('hidden');
+  });
+});
+
+applyLanguage(getLang());
+
+/* =========================================================
+   Theme
+   ========================================================= */
+function applyTheme(theme){
+  document.body.setAttribute('data-theme', theme);
+  themeIcon.innerHTML = theme === 'dark'
+    ? '<path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/>'
+    : '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>';
+  localStorage.setItem('astra-theme', theme);
+}
+themeToggle.addEventListener('click', () => {
+  const cur = document.body.getAttribute('data-theme');
+  applyTheme(cur === 'dark' ? 'light' : 'dark');
+});
+applyTheme(localStorage.getItem('astra-theme') || 'light');
+
+/* =========================================================
+   API Key modal
+   ========================================================= */
+function openApiKeyModal(){
+  apikeyInput.value = getGeminiKey();
+  apikeyOverlay.classList.remove('hidden');
+  sidebar.classList.remove('show');
+  scrim.classList.remove('show');
+  setTimeout(() => apikeyInput.focus(), 50);
+}
+function closeApiKeyModal(){ apikeyOverlay.classList.add('hidden'); }
+
+apikeyBtn.addEventListener('click', openApiKeyModal);
+apikeyCancel.addEventListener('click', closeApiKeyModal);
+apikeyOverlay.addEventListener('click', (e) => { if (e.target === apikeyOverlay) closeApiKeyModal(); });
+apikeySave.addEventListener('click', () => {
+  const val = apikeyInput.value.trim();
+  if (!val) { alert('Isi dulu API key-nya, atau tekan Batal.'); return; }
+  setGeminiKey(val);
+  closeApiKeyModal();
+  updateSendState();
+});
+
+/* =========================================================
+   Plus menu + image upload
+   ========================================================= */
+function openPlusMenu(){
+  plusMenuOverlay.classList.remove('hidden');
+  requestAnimationFrame(() => plusMenuOverlay.classList.add('open'));
+}
+function closePlusMenu(){
+  plusMenuOverlay.classList.remove('open');
+  setTimeout(() => plusMenuOverlay.classList.add('hidden'), 200);
+}
+plusBtn.addEventListener('click', (e) => {
+  e.stopPropagation();
+  if (plusMenuOverlay.classList.contains('open')) {
+    closePlusMenu();
+  } else {
+    openPlusMenu();
+  }
+});
+plusMenuCloseBtn.addEventListener('click', () => closePlusMenu());
+plusMenuOverlay.addEventListener('click', (e) => {
+  if (e.target === plusMenuOverlay) closePlusMenu();
+});
+plusUploadImage.addEventListener('click', () => {
+  closePlusMenu();
+  imageInput.click();
+});
+plusCameraTile.addEventListener('click', () => {
+  closePlusMenu();
+  cameraInput.click();
+});
+plusWebsearchToggle.addEventListener('click', () => {
+  plusWebsearchToggle.classList.toggle('on');
+  setWebSearchEnabled(plusWebsearchToggle.classList.contains('on'));
+});
+// Restore state toggle pencarian web dari localStorage saat halaman dimuat
+plusWebsearchToggle.classList.toggle('on', isWebSearchEnabled());
+
+/* =========================================================
+   Serper API key panel (opsional, di bawah toggle pencarian web)
+   ========================================================= */
+const serperInput = document.getElementById('serper-input');
+const serperSaveBtn = document.getElementById('serper-save-btn');
+const serperStatusEl = document.getElementById('serper-status');
+
+function setSerperStatus(kind, text){
+  // kind: 'loading' | 'ok' | 'err' | '' (kosong = sembunyikan)
+  serperStatusEl.className = 'serper-status' + (kind ? ' show ' + kind : '');
+  serperStatusEl.innerHTML = text || '';
+}
+
+function renderSerperClearOption(){
+  const lang = getLang();
+  const activeLabel = lang === 'id' ? 'Serper aktif — pencarian web pakai Serper.' : 'Serper active — web search uses Serper.';
+  const clearLabel = lang === 'id' ? 'Hapus' : 'Remove';
+  setSerperStatus('ok', `${activeLabel} <button type="button" class="serper-clear-btn" id="serper-clear-btn">${clearLabel}</button>`);
+  const clearBtn = document.getElementById('serper-clear-btn');
+  if (clearBtn) {
+    clearBtn.addEventListener('click', () => {
+      clearSerperKey();
+      serperInput.value = '';
+      setSerperStatus('', '');
+    });
+  }
+}
+
+// Saat halaman dimuat: kalau sudah ada Serper key tersimpan, tampilkan statusnya
+if (isSerperActive()) {
+  serperInput.value = getSerperKey();
+  renderSerperClearOption();
+}
+
+// Validasi key dengan 1x request ringan ke Serper sebelum benar-benar disimpan/diaktifkan,
+// supaya kalau key salah, provider TIDAK ikut-ikutan pindah ke Serper (tetap pakai Google Search bawaan).
+async function validateSerperKey(key){
+  try {
+    const res = await fetch('https://google.serper.dev/search', {
+      method: 'POST',
+      headers: { 'X-API-KEY': key, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ q: 'test' })
+    });
+    return res.ok;
+  } catch (e) {
+    return false;
+  }
+}
+
+serperSaveBtn.addEventListener('click', async () => {
+  const key = serperInput.value.trim();
+  const lang = getLang();
+  if (!key) {
+    // Kosongkan berarti user mau kembali ke Google Search bawaan
+    clearSerperKey();
+    setSerperStatus('', '');
+    return;
+  }
+  serperSaveBtn.disabled = true;
+  setSerperStatus('loading', lang === 'id' ? 'Memeriksa key...' : 'Checking key...');
+
+  const valid = await validateSerperKey(key);
+  serperSaveBtn.disabled = false;
+
+  if (valid) {
+    setSerperKey(key);
+    renderSerperClearOption();
+  } else {
+    // Key salah/gagal divalidasi: JANGAN disimpan, provider tetap Google Search bawaan.
+    setSerperStatus('err', lang === 'id' ? 'Key tidak valid. Pencarian web tetap pakai Google Search.' : 'Invalid key. Web search stays on Google Search.');
+  }
+});
+
+/* =========================================================
+   Model picker (Astra 1.0 Flash / Astra 2.0 Flash)
+   ========================================================= */
+const modelSelectorBtn = document.getElementById('model-selector');
+const modelSelectorLabel = document.getElementById('model-selector-label');
+const modelPickerOverlay = document.getElementById('model-picker-overlay');
+const modelPickerCloseBtn = document.getElementById('model-picker-close-btn');
+const modelTagEl = document.getElementById('model-tag');
+const modelOptionEls = Array.from(document.querySelectorAll('.model-option'));
+
+function refreshModelUI(){
+  const current = getSelectedModel();
+  const label = ASTRA_MODELS[current]?.label || 'Astra 1.0 Flash';
+  modelSelectorLabel.textContent = label;
+  if (modelTagEl) modelTagEl.textContent = label;
+  modelOptionEls.forEach(opt => {
+    opt.classList.toggle('selected', opt.dataset.model === current);
+  });
+}
+refreshModelUI();
+
+function openModelPicker(){
+  modelPickerOverlay.classList.remove('hidden');
+  requestAnimationFrame(() => modelPickerOverlay.classList.add('open'));
+}
+function closeModelPicker(){
+  modelPickerOverlay.classList.remove('open');
+  setTimeout(() => modelPickerOverlay.classList.add('hidden'), 200);
+}
+modelSelectorBtn.addEventListener('click', (e) => {
+  e.stopPropagation();
+  openModelPicker();
+});
+modelPickerCloseBtn.addEventListener('click', () => closeModelPicker());
+modelPickerOverlay.addEventListener('click', (e) => {
+  if (e.target === modelPickerOverlay) closeModelPicker();
+});
+modelOptionEls.forEach(opt => {
+  opt.addEventListener('click', () => {
+    setSelectedModel(opt.dataset.model);
+    refreshModelUI();
+    closeModelPicker();
+  });
+});
+
+/* ---------- Sources bottom sheet (daftar lengkap sumber web_search) ---------- */
+const sourcesOverlay = document.getElementById('sources-overlay');
+const sourcesSheetCloseBtn = document.getElementById('sources-sheet-close-btn');
+sourcesSheetCloseBtn.addEventListener('click', () => closeSourcesSheet());
+sourcesOverlay.addEventListener('click', (e) => {
+  if (e.target === sourcesOverlay) closeSourcesSheet();
+});
+
+function fileToBase64(file){
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+imageInput.addEventListener('change', async () => {
+  const files = Array.from(imageInput.files || []);
+  for (const file of files) {
+    if (!file.type.startsWith('image/')) continue;
+    try {
+      const dataUrl = await fileToBase64(file);
+      pendingImages.push(dataUrl);
+      renderImagePreviews();
+    } catch (e) {
+      console.error('Gagal baca gambar:', e);
+    }
+  }
+  imageInput.value = '';
+  updateSendState();
+});
+
+cameraInput.addEventListener('change', async () => {
+  const files = Array.from(cameraInput.files || []);
+  for (const file of files) {
+    if (!file.type.startsWith('image/')) continue;
+    try {
+      const dataUrl = await fileToBase64(file);
+      pendingImages.push(dataUrl);
+      renderImagePreviews();
+    } catch (e) {
+      console.error('Gagal baca gambar:', e);
+    }
+  }
+  cameraInput.value = '';
+  updateSendState();
+});
+
+function renderImagePreviews(){
+  imagePreviewRow.innerHTML = '';
+  pendingImages.forEach((dataUrl, idx) => {
+    const item = document.createElement('div');
+    item.className = 'image-preview-item';
+    item.innerHTML = `<img src="${dataUrl}"><button class="image-preview-remove" data-idx="${idx}">✕</button>`;
+    imagePreviewRow.appendChild(item);
+  });
+  imagePreviewRow.querySelectorAll('.image-preview-remove').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const idx = parseInt(btn.dataset.idx, 10);
+      pendingImages.splice(idx, 1);
+      renderImagePreviews();
+      updateSendState();
+    });
+  });
+}
+
+/* =========================================================
+   Sidebar (mobile)
+   ========================================================= */
+menuBtn.addEventListener('click', () => {
+  sidebar.classList.toggle('show');
+  scrim.classList.toggle('show');
+});
+scrim.addEventListener('click', () => {
+  sidebar.classList.remove('show');
+  scrim.classList.remove('show');
+});
+
+/* =========================================================
+   Chat history (Firestore)
+   ========================================================= */
+function chatsRef(){
+  return db.collection('users').doc(currentUser.uid).collection('chats');
+}
+
+async function loadHistory(){
+  historyEl.innerHTML = '';
+  try {
+    const snap = await chatsRef().orderBy('updatedAt', 'desc').limit(50).get();
+    snap.forEach(doc => {
+      const data = doc.data();
+      const item = document.createElement('div');
+      item.className = 'history-item';
+      item.dataset.id = doc.id;
+      item.textContent = data.title || 'Obrolan baru';
+      item.addEventListener('click', () => openChat(doc.id));
+      historyEl.appendChild(item);
+    });
+  } catch (e) {
+    console.error('Gagal load history:', e);
+  }
+}
+
+function markActiveHistory(id){
+  document.querySelectorAll('.history-item').forEach(el => {
+    el.classList.toggle('active', el.dataset.id === id);
+  });
+}
+
+async function openChat(id){
+  currentChatId = id;
+  markActiveHistory(id);
+  messages = [];
+  messagesEl.innerHTML = '';
+  try {
+    const snap = await chatsRef().doc(id).collection('messages').orderBy('createdAt', 'asc').get();
+    snap.forEach(doc => {
+      const m = doc.data();
+      const images = m.images || [];
+      const searchGroups = m.searchGroups || null;
+      messages.push({ role: m.role, text: m.text, images, searchGroups });
+      renderMessage(m.role, m.text, images, false, false, searchGroups);
+    });
+    if (messages.length) {
+      welcomeEl.style.display = 'none';
+      messagesEl.style.display = 'block';
+    }
+  } catch (e) {
+    console.error('Gagal buka chat:', e);
+  }
+  sidebar.classList.remove('show');
+  scrim.classList.remove('show');
+  scrollToBottom();
+}
+
+function startNewChat(clearActive = true){
+  currentChatId = null;
+  messages = [];
+  messagesEl.innerHTML = '';
+  messagesEl.style.display = 'none';
+  welcomeEl.style.display = 'flex';
+  if (clearActive) markActiveHistory(null);
+  sidebar.classList.remove('show');
+  scrim.classList.remove('show');
+  input.value = '';
+  pendingImages = [];
+  renderImagePreviews();
+  autoGrow();
+  updateSendState();
+}
+newChatBtn.addEventListener('click', () => startNewChat());
+
+async function ensureChatDoc(firstUserMessage){
+  if (currentChatId) return currentChatId;
+  const title = firstUserMessage.slice(0, 40) + (firstUserMessage.length > 40 ? '…' : '');
+  const docRef = await chatsRef().add({
+    title,
+    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+  });
+  currentChatId = docRef.id;
+  await loadHistory();
+  markActiveHistory(currentChatId);
+  return currentChatId;
+}
+
+async function saveMessage(role, text, images = [], searchGroups = null){
+  if (!currentChatId) return;
+  const payload = {
+    role, text,
+    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+  };
+  if (images && images.length) payload.images = images;
+  if (searchGroups && searchGroups.length) payload.searchGroups = searchGroups;
+  await chatsRef().doc(currentChatId).collection('messages').add(payload);
+  await chatsRef().doc(currentChatId).update({
+    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+  });
+}
+
+/* =========================================================
+   Rendering
+   ========================================================= */
+function escapeHtml(str){
+  return str.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+// Minimal markdown: bold, inline code, code block, line breaks
+function formatText(text){
+  let escaped = escapeHtml(text);
+
+  // Ekstrak code block dulu ke placeholder supaya tidak ikut ter-split jadi paragraf
+  const codeBlocks = [];
+
+  function buildCodeBlockHtml(lang, code, isStreaming){
+    const trimmed = isStreaming ? code : code.trim();
+    const langLabel = lang ? lang.trim() : 'code';
+    const encoded = trimmed.replace(/"/g, '&quot;');
+    const runnable = /^html$/i.test(langLabel.trim());
+    return `<div class="code-block${isStreaming ? ' code-block-streaming' : ''}">` +
+      `<div class="code-block-header">` +
+        `<span class="code-block-lang">${escapeHtml(langLabel)}</span>` +
+        `<div class="code-block-actions">` +
+          (runnable && !isStreaming ? `<button class="code-run-btn" data-code="${encoded}" title="Jalankan kode">` +
+            `<svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>` +
+            `<span>Run</span>` +
+          `</button>` : '') +
+          `<button class="code-copy-btn" data-code="${encoded}" title="Copy code">` +
+            `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>` +
+            `<span>Copy</span>` +
+          `</button>` +
+        `</div>` +
+      `</div>` +
+      `<div class="code-block-scroll"><pre><code>${trimmed}</code></pre></div>` +
+    `</div>`;
+  }
+
+  // 1) Code block yang SUDAH tertutup dengan ```
+  escaped = escaped.replace(/```(\w*)\n?([\s\S]*?)```/g, (_, lang, code) => {
+    const html = buildCodeBlockHtml(lang, code.trim(), false);
+    codeBlocks.push(html);
+    return `\u0000CODEBLOCK${codeBlocks.length - 1}\u0000`;
+  });
+
+  // 2) Code block yang BELUM tertutup (masih streaming) — sisa ``` terakhir sampai akhir teks
+  escaped = escaped.replace(/```(\w*)\n?([\s\S]*)$/, (_, lang, code) => {
+    const html = buildCodeBlockHtml(lang, code, true);
+    codeBlocks.push(html);
+    return `\u0000CODEBLOCK${codeBlocks.length - 1}\u0000`;
+  });
+
+  escaped = escaped.replace(/`([^`]+)`/g, '<code>$1</code>');
+  escaped = escaped.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+  const paragraphs = escaped.split(/\n\n+/).map(p => `<p>${p.replace(/\n/g, '<br>')}</p>`).join('');
+
+  // Kembalikan code block ke tempatnya (di luar <p> supaya tidak jadi inline)
+  return paragraphs.replace(/\u0000CODEBLOCK(\d+)\u0000/g, (_, i) => codeBlocks[Number(i)]);
+}
+
+const READING_INDICATOR_HTML = `<div class="reading-indicator"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg><span>Reading coding guidelines...</span></div>`;
+
+// Ambil nama domain pendek dan bersih dari sebuah URL (buang "www.", ambil host saja) untuk label chip.
+function shortDomainLabel(uri){
+  try {
+    const host = new URL(uri).hostname.replace(/^www\./, '');
+    return host;
+  } catch (e) {
+    return uri;
+  }
+}
+
+// Registry global penyimpan daftar sumber per tombol "Sumber/Source", dikunci oleh id unik,
+// supaya saat tombol dipencet kita tahu daftar lengkap mana yang harus ditampilkan di bottom sheet.
+const sourceGroupsRegistry = {};
+let sourceGroupsCounter = 0;
+
+// Bangun HTML tombol tunggal "Sumber"/"Source" dengan stack favicon (mirip Claude), dari daftar
+// sources gabungan. sources: [{title, uri}] — dedup berdasarkan domain. Klik tombol membuka bottom sheet
+// berisi daftar lengkap sumber (lihat openSourcesSheet).
+function buildSourceChipsHtml(sources){
+  if (!sources || !sources.length) return '';
+  const MAX_FAVICONS = 3;
+
+  const seenHosts = new Set();
+  const deduped = [];
+  for (const s of sources) {
+    if (!s || !s.uri) continue;
+    const host = shortDomainLabel(s.uri);
+    if (seenHosts.has(host)) continue;
+    seenHosts.add(host);
+    deduped.push({ ...s, host });
+  }
+  if (!deduped.length) return '';
+
+  const groupId = 'sg' + (++sourceGroupsCounter);
+  sourceGroupsRegistry[groupId] = deduped;
+
+  const faviconsHtml = deduped.slice(0, MAX_FAVICONS).map(s => {
+    const favicon = `https://www.google.com/s2/favicons?domain=${encodeURIComponent(s.host)}&sz=32`;
+    return `<span class="chip-favicon"><img src="${favicon}" alt="" loading="lazy" onerror="this.parentElement.style.display='none'"></span>`;
+  }).join('');
+
+  const label = getLang() === 'id' ? 'Sumber' : 'Source';
+  return `<div class="source-chips-row"><button type="button" class="source-btn" data-source-group="${groupId}" onclick="openSourcesSheet('${groupId}')">` +
+    `<span>${label}</span>` +
+    `<span class="source-btn-favicons">${faviconsHtml}</span>` +
+  `</button></div>`;
+}
+
+// Tampilkan bottom sheet berisi daftar lengkap sumber untuk groupId tertentu.
+// Bagian atas berjudul "Kutipan"/"Citation" dengan sumber utama (yang pertama dipakai),
+// diikuti "Sumber lainnya"/"Other sources" untuk sisanya — meniru tata letak referensi.
+function openSourcesSheet(groupId){
+  const sources = sourceGroupsRegistry[groupId];
+  if (!sources || !sources.length) return;
+
+  const titleLabel = getLang() === 'id' ? 'Sumber' : 'Sources';
+  const citationLabel = getLang() === 'id' ? 'Kutipan:' : 'Citation:';
+  const otherLabel = getLang() === 'id' ? 'Sumber lainnya' : 'Other sources';
+
+  const renderItem = (s) => {
+    const favicon = `https://www.google.com/s2/favicons?domain=${encodeURIComponent(s.host)}&sz=32`;
+    const title = escapeHtml(s.title || s.host);
+    return `<a class="sources-sheet-item" href="${escapeHtml(s.uri)}" target="_blank" rel="noopener noreferrer">` +
+      `<span class="sources-sheet-item-title">${title}</span>` +
+      `<span class="sources-sheet-item-site"><span class="chip-favicon"><img src="${favicon}" alt="" loading="lazy" onerror="this.parentElement.style.display='none'"></span><span>${escapeHtml(s.host)}</span></span>` +
+    `</a>`;
+  };
+
+  const first = sources[0];
+  const rest = sources.slice(1);
+
+  let bodyHtml = `<div class="sources-sheet-label">${citationLabel}</div>` +
+    `<div class="sources-sheet-list">${renderItem(first)}</div>`;
+
+  if (rest.length) {
+    bodyHtml += `<div class="sources-sheet-label">${otherLabel}</div>` +
+      `<div class="sources-sheet-list">${rest.map(renderItem).join('')}</div>`;
+  }
+
+  document.getElementById('sources-sheet-title').textContent = titleLabel;
+  document.getElementById('sources-sheet-body').innerHTML = bodyHtml;
+
+  sourcesOverlay.classList.remove('hidden');
+  requestAnimationFrame(() => sourcesOverlay.classList.add('open'));
+}
+function closeSourcesSheet(){
+  sourcesOverlay.classList.remove('open');
+  setTimeout(() => sourcesOverlay.classList.add('hidden'), 200);
+}
+
+// Sisipkan blok chip sumber ke dalam teks jawaban (versi HTML sudah diformat). Semua sumber
+// dari seluruh pemanggilan web_search dalam jawaban ini digabung jadi SATU tombol "Sumber" di akhir
+// jawaban (dedup per domain) — gaya ringkas seperti Claude, bukan satu blok besar per pencarian.
+function injectSourceChips(rawText, searchGroups){
+  const bodyHtml = formatText(rawText);
+  if (!searchGroups || !searchGroups.length) return bodyHtml;
+
+  const allSources = searchGroups.flatMap(g => g.sources || []);
+  const chipsHtml = buildSourceChipsHtml(allSources);
+  return bodyHtml + chipsHtml;
+}
+
+// Indikator "Mencari di web" / "Searching the web" dengan efek shimmer — tampilan beda dari reading-indicator.
+function buildSearchIndicatorHtml(){
+  const label = getLang() === 'id' ? 'Mencari di web' : 'Searching the web';
+  return `<div class="search-indicator" data-search-indicator><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg><span class="shimmer-text">${label}</span></div>`;
+}
+
+// Tampilkan indikator pencarian web di dalam bubble-col milik row pesan model tertentu.
+function showSearchIndicator(row){
+  if (!row) return;
+  const col = row.querySelector('.bubble-col');
+  if (!col || col.querySelector('[data-search-indicator]')) return;
+  col.insertAdjacentHTML('afterbegin', buildSearchIndicatorHtml());
+  scrollToBottom();
+}
+
+// Sembunyikan/hapus indikator pencarian web (dipanggil begitu pencarian selesai / Astra mulai menjawab).
+function hideSearchIndicator(row){
+  if (!row) return;
+  const el = row.querySelector('[data-search-indicator]');
+  if (el) el.remove();
+}
+
+function renderMessage(role, text, images = [], animate = true, showReadingIndicator = false, searchGroups = null){
+  welcomeEl.style.display = 'none';
+  messagesEl.style.display = 'block';
+
+  const row = document.createElement('div');
+  row.className = 'msg-row ' + (role === 'user' ? 'user' : 'ai');
+
+  const imagesHtml = images && images.length
+    ? `<div class="msg-images">${images.map(src => `<img src="${src}" class="msg-image">`).join('')}</div>`
+    : '';
+  const textHtml = text ? (searchGroups && searchGroups.length ? injectSourceChips(text, searchGroups) : formatText(text)) : '';
+  const readingHtml = showReadingIndicator ? READING_INDICATOR_HTML : '';
+
+  if (role === 'user') {
+    row.innerHTML = `<div class="bubble-col"><div class="bubble">${imagesHtml}${textHtml}</div></div><div class="avatar me">${(currentUser?.displayName || '?')[0].toUpperCase()}</div>`;
+  } else {
+    row.innerHTML = `<div class="avatar ai">A</div><div class="bubble-col">${readingHtml}<div class="bubble">${imagesHtml}${textHtml}</div></div>`;
+  }
+  messagesEl.appendChild(row);
+  scrollToBottom();
+  return row;
+}
+
+function renderTyping(){
+  const row = document.createElement('div');
+  row.className = 'msg-row ai';
+  row.id = 'typing-row';
+  row.innerHTML = `<div class="avatar ai">A</div><div class="bubble"><div class="typing"><span></span><span></span><span></span></div></div>`;
+  messagesEl.appendChild(row);
+  scrollToBottom();
+}
+function removeTyping(){
+  const el = document.getElementById('typing-row');
+  if (el) el.remove();
+}
+
+function scrollToBottom(){
+  requestAnimationFrame(() => {
+    chatScroll.scrollTop = chatScroll.scrollHeight;
+  });
+}
+
+/* =========================================================
+   Gemini API call (streaming via SSE)
+   ========================================================= */
+// Satu kali request stream ke Gemini. Mengembalikan { fullText, functionCalls }.
+async function streamOneTurn(contents, onChunk){
+  const body = {
+    system_instruction: { parts: [{ text: SYSTEM_PROMPT }] },
+    contents,
+    tools: buildGeminiTools(),
+    generationConfig: {
+      temperature: 0.7,
+      maxOutputTokens: 65536,
+      thinkingConfig: { thinkingBudget: 1024 }
+    }
+  };
+
+  const apiKey = getGeminiKey();
+  if (!apiKey) {
+    const err = new Error('Belum ada API key. Buka menu "API Key" di sidebar dan masukkan key Gemini kamu dulu.');
+    err.noKey = true;
+    throw err;
+  }
+
+  const res = await fetch(getGeminiEndpoint(), {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-goog-api-key': apiKey
+    },
+    body: JSON.stringify(body)
+  });
+
+  if (!res.ok) {
+    const errData = await res.json().catch(() => ({}));
+    throw new Error(errData?.error?.message || `HTTP ${res.status}`);
+  }
+
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder('utf-8');
+  let buffer = '';
+  let fullText = '';
+  const functionCalls = [];
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+
+    // SSE format: lines starting with "data: {...}", events separated by blank line
+    const lines = buffer.split('\n');
+    buffer = lines.pop(); // sisa baris yang belum lengkap disimpan lagi ke buffer
+
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (!trimmed.startsWith('data:')) continue;
+      const jsonStr = trimmed.slice(5).trim();
+      if (!jsonStr || jsonStr === '[DONE]') continue;
+      try {
+        const parsed = JSON.parse(jsonStr);
+        const parts = parsed?.candidates?.[0]?.content?.parts || [];
+        for (const p of parts) {
+          if (p.text) {
+            fullText += p.text;
+            onChunk(fullText);
+          } else if (p.functionCall) {
+            functionCalls.push({ ...p.functionCall, thoughtSignature: p.thoughtSignature });
+          }
+        }
+      } catch (e) {
+        // baris belum lengkap / bukan JSON valid, skip
+      }
+    }
+  }
+
+  return { fullText, functionCalls };
+}
+
+// Panggil Gemini dengan tool bawaan Google Search untuk benar-benar mencari di web,
+// lalu kembalikan ringkasan hasil + sumbernya sebagai teks untuk dipakai Astra sebagai jawaban akhir.
+// Ini adalah provider DEFAULT (dipakai kalau Serper API key belum diisi).
+async function performWebSearchGemini(query, todayStr){
+  const apiKey = getGeminiKey();
+  if (!apiKey) {
+    return JSON.stringify({ error: 'Tidak ada API key.' });
+  }
+  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${getSelectedModel()}:generateContent`;
+
+  const searchSystemInstruction = `Hari ini adalah ${todayStr}. Ini adalah tanggal SEBENARNYA saat ini — anggap ini fakta mutlak, JANGAN pernah membantahnya atau mengira sistem/tanggal ini salah, walau berbeda dari pengetahuan internalmu.
+
+Kamu diberi akses Google Search untuk mencari informasi TERKINI yang mungkin terjadi SETELAH batas pengetahuan trainingmu. Aturan wajib saat menjawab:
+- Percayai hasil pencarian Google Search sepenuhnya, SELALU utamakan hasil pencarian di atas pengetahuan internalmu, terutama untuk peristiwa, kematian, berita, atau kejadian yang tanggalnya lebih baru dari batas pengetahuanmu.
+- JANGAN PERNAH menyebut suatu peristiwa sebagai "hoaks", "berita palsu", "kemungkinan fiksi/satire", atau meragukan validitasnya HANYA karena tanggal kejadiannya terasa "di masa depan" menurut pengetahuan trainingmu. Tanggal hari ini sudah dikonfirmasi di atas — banyak hal bisa saja sudah terjadi sejak pengetahuanmu berhenti diperbarui.
+- Jika beberapa sumber tepercaya (berita, ensiklopedia, situs resmi) secara konsisten melaporkan hal yang sama, anggap itu FAKTA, bukan spekulasi.
+- JANGAN berhenti di satu hasil pencarian saja. Lakukan pencarian ganda dengan variasi kata kunci/sudut pandang berbeda jika perlu (misalnya sumber berita, ensiklopedia/Wikipedia, situs resmi, forum diskusi) supaya jawabanmu didukung OLEH SEBANYAK MUNGKIN sumber independen yang berbeda-beda, bukan cuma dari satu website.
+- Di akhir jawabanmu, WAJIB sertakan bagian terpisah berjudul "Sumber:" berisi daftar bernomor semua website/domain berbeda yang kamu gunakan sebagai referensi (nama situs saja, contoh: 1. Wikipedia 2. Kompas.com 3. Reuters, dst) — sertakan sebanyak mungkin sumber unik yang benar-benar kamu pakai, jangan cuma satu.
+- Jawab query pengguna secara langsung, ringkas, faktual, dan netral berdasarkan hasil pencarian. Jangan tambahkan disclaimer soal "ini di luar pengetahuanmu" kecuali hasil pencarian memang benar-benar tidak ditemukan/tidak relevan.`;
+
+  try {
+    const res = await fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-goog-api-key': apiKey
+      },
+      body: JSON.stringify({
+        system_instruction: { parts: [{ text: searchSystemInstruction }] },
+        contents: [{ role: 'user', parts: [{ text: query }] }],
+        tools: [{ google_search: {} }],
+        generationConfig: { temperature: 0.3, maxOutputTokens: 4096 }
+      })
+    });
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({}));
+      return JSON.stringify({ error: errData?.error?.message || `HTTP ${res.status}` });
+    }
+    const data = await res.json();
+    const candidate = data?.candidates?.[0];
+    const text = (candidate?.content?.parts || []).map(p => p.text || '').join('').trim();
+    const rawSources = (candidate?.groundingMetadata?.groundingChunks || [])
+      .map(c => c?.web?.uri && c?.web?.title ? { title: c.web.title, uri: c.web.uri } : null)
+      .filter(Boolean);
+    // Dedup sumber berdasarkan title (kadang grounding balikin beberapa chunk dari domain yang sama)
+    const seenTitles = new Set();
+    const sources = rawSources.filter(s => {
+      if (seenTitles.has(s.title)) return false;
+      seenTitles.add(s.title);
+      return true;
+    });
+    return JSON.stringify({ summary: text || 'Tidak ditemukan hasil relevan.', sources, sourceCount: sources.length, provider: 'google' });
+  } catch (e) {
+    return JSON.stringify({ error: e.message || 'Gagal melakukan pencarian web.' });
+  }
+}
+
+// Panggil Serper.dev untuk mendapat hasil pencarian mentah (banyak link/sumber sekaligus),
+// lalu minta Gemini meringkas hasil-hasil tersebut jadi jawaban natural, sambil tetap
+// mencantumkan semua sumber yang dipakai. Dipakai HANYA kalau user sudah mengisi Serper API key.
+async function performWebSearchSerper(query, todayStr){
+  const serperKey = getSerperKey();
+  const geminiKey = getGeminiKey();
+  if (!geminiKey) {
+    return JSON.stringify({ error: 'Tidak ada API key Gemini.' });
+  }
+
+  // 1) Ambil hasil mentah dari Serper (Google Search API pihak ketiga, hasil organik lebih banyak)
+  let serperResults;
+  try {
+    const serperRes = await fetch('https://google.serper.dev/search', {
+      method: 'POST',
+      headers: {
+        'X-API-KEY': serperKey,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ q: query, num: 20 })
+    });
+    if (!serperRes.ok) {
+      return JSON.stringify({ error: `Serper HTTP ${serperRes.status}` });
+    }
+    serperResults = await serperRes.json();
+  } catch (e) {
+    return JSON.stringify({ error: e.message || 'Gagal menghubungi Serper.' });
+  }
+
+  const organic = (serperResults.organic || []).slice(0, 15).map((r, i) => ({
+    no: i + 1,
+    title: r.title,
+    snippet: r.snippet,
+    link: r.link,
+    date: r.date || null
+  }));
+  const answerBox = serperResults.answerBox
+    ? { title: serperResults.answerBox.title, answer: serperResults.answerBox.answer || serperResults.answerBox.snippet }
+    : null;
+  const knowledgeGraph = serperResults.knowledgeGraph
+    ? { title: serperResults.knowledgeGraph.title, description: serperResults.knowledgeGraph.description }
+    : null;
+
+  if (!organic.length && !answerBox && !knowledgeGraph) {
+    return JSON.stringify({ summary: 'Tidak ditemukan hasil relevan.', sources: [], sourceCount: 0, provider: 'serper' });
+  }
+
+  // 2) Minta Gemini meringkas hasil mentah tsb jadi jawaban natural yang tetap menyebut sumbernya
+  const summarizeInstruction = `Hari ini adalah ${todayStr}. Anggap ini fakta mutlak. Kamu diberi hasil pencarian Google (via Serper) mentah di bawah untuk query: "${query}".
+
+Aturan wajib:
+- Percayai isi hasil pencarian ini sepenuhnya sebagai fakta terkini, JANGAN dibantah/dicap "hoaks"/"belum terjadi" hanya karena terasa di luar pengetahuan internalmu atau "di masa depan".
+- Susun jawaban ringkas, faktual, langsung ke inti, berdasarkan hasil pencarian ini. Gabungkan info dari beberapa hasil yang relevan.
+- Di akhir jawabanmu, WAJIB sertakan bagian "Sumber:" berisi daftar bernomor nama situs (domain) dari hasil yang benar-benar kamu pakai, sebanyak mungkin sumber unik (contoh: 1. Wikipedia 2. Kompas.com 3. Reuters).
+- Jangan tambahkan disclaimer meragukan validitas kecuali datanya memang kosong/tidak relevan.
+
+Hasil pencarian mentah (JSON):
+${JSON.stringify({ answerBox, knowledgeGraph, organic })}`;
+
+  try {
+    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${getSelectedModel()}:generateContent`;
+    const res = await fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-goog-api-key': geminiKey
+      },
+      body: JSON.stringify({
+        system_instruction: { parts: [{ text: summarizeInstruction }] },
+        contents: [{ role: 'user', parts: [{ text: query }] }],
+        generationConfig: { temperature: 0.3, maxOutputTokens: 4096 }
+      })
+    });
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({}));
+      return JSON.stringify({ error: errData?.error?.message || `HTTP ${res.status}` });
+    }
+    const data = await res.json();
+    const candidate = data?.candidates?.[0];
+    const text = (candidate?.content?.parts || []).map(p => p.text || '').join('').trim();
+
+    // Sumber langsung dari hasil mentah Serper (jauh lebih banyak daripada grounding Gemini)
+    const seenLinks = new Set();
+    const sources = organic.filter(r => {
+      if (!r.link || seenLinks.has(r.link)) return false;
+      seenLinks.add(r.link);
+      return true;
+    }).map(r => ({ title: r.title, uri: r.link }));
+
+    return JSON.stringify({ summary: text || 'Tidak ditemukan hasil relevan.', sources, sourceCount: sources.length, provider: 'serper' });
+  } catch (e) {
+    return JSON.stringify({ error: e.message || 'Gagal meringkas hasil pencarian.' });
+  }
+}
+
+// Router: pilih provider pencarian web berdasarkan ada/tidaknya Serper API key yang valid.
+// Kalau user tidak mengisi Serper key sama sekali, otomatis pakai Google Search bawaan Gemini (default, tanpa perlu setup apapun).
+async function performWebSearch(query){
+  const now = new Date();
+  const todayStr = now.toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+
+  if (isSerperActive()) {
+    return await performWebSearchSerper(query, todayStr);
+  }
+  return await performWebSearchGemini(query, todayStr);
+}
+
+// Jalankan tool lokal berdasarkan nama & argumen dari Gemini.
+async function executeTool(name, args){
+  if (name === 'search_docs') {
+    return searchDocs(args.query || '');
+  }
+  if (name === 'run_code') {
+    return runCodeSandboxed(args.code || '');
+  }
+  if (name === 'web_search') {
+    return await performWebSearch(args.query || '');
+  }
+  return JSON.stringify({ error: `Tool tidak dikenal: ${name}` });
+}
+
+async function askAstraStream(history, onChunk, onStatus){
+  // history: array of {role: 'user'|'model', text, images?: base64 data URLs}
+  // onStatus(name|null): dipanggil dengan nama tool saat mulai dieksekusi, dan null saat selesai/tidak ada tool.
+  // Return: { text, searchGroups } — searchGroups adalah daftar hasil web_search (query + sources + posisi teks)
+  // dipakai untuk merender chip link sumber tepat setelah bagian jawaban yang relevan (mirip ChatGPT).
+  const contents = history.map(m => {
+    const parts = [];
+    if (m.images && m.images.length) {
+      m.images.forEach(dataUrl => {
+        const match = dataUrl.match(/^data:(.+);base64,(.*)$/);
+        if (match) {
+          parts.push({ inline_data: { mime_type: match[1], data: match[2] } });
+        }
+      });
+    }
+    if (m.text) parts.push({ text: m.text });
+    if (!parts.length) parts.push({ text: '' });
+    return { role: m.role, parts };
+  });
+
+  const MAX_TOOL_ROUNDS = 10;
+  let combinedText = '';
+  const searchGroups = [];
+
+  for (let round = 0; round < MAX_TOOL_ROUNDS; round++){
+    const { fullText, functionCalls } = await streamOneTurn(contents, (partial) => {
+      onChunk(combinedText + partial);
+    });
+
+    combinedText += fullText;
+
+    if (!functionCalls.length) {
+      if (!combinedText) throw new Error('Respons kosong dari Astra.');
+      return { text: combinedText, searchGroups };
+    }
+
+    // Gemini minta panggil tool: tambahkan giliran model (berisi functionCall) ke contents,
+    // lalu tambahkan hasil eksekusi tool sebagai giliran "function" berikutnya.
+    contents.push({
+      role: 'model',
+      parts: functionCalls.map(fc => {
+        const { thoughtSignature, ...callOnly } = fc;
+        const part = { functionCall: callOnly };
+        if (thoughtSignature) part.thoughtSignature = thoughtSignature;
+        return part;
+      })
+    });
+
+    if (onStatus) {
+      const primaryCall = functionCalls[0];
+      onStatus(primaryCall.name);
+    }
+
+    const functionResponseParts = [];
+    for (const fc of functionCalls) {
+      const result = await executeTool(fc.name, fc.args || {});
+      functionResponseParts.push({
+        functionResponse: {
+          name: fc.name,
+          response: { result }
+        }
+      });
+      // Catat sumber tiap panggilan web_search, beserta posisi (panjang teks sejauh ini)
+      // supaya chip link bisa disisipkan tepat setelah paragraf jawaban terkait pencarian ini.
+      if (fc.name === 'web_search') {
+        try {
+          const parsed = JSON.parse(result);
+          if (parsed && Array.isArray(parsed.sources) && parsed.sources.length) {
+            searchGroups.push({
+              query: fc.args?.query || '',
+              sources: parsed.sources,
+              afterLength: combinedText.length
+            });
+          }
+        } catch (e) { /* abaikan kalau result bukan JSON valid */ }
+      }
+    }
+    contents.push({ role: 'function', parts: functionResponseParts });
+
+    if (onStatus) onStatus(null);
+  }
+
+  if (!combinedText) throw new Error('Astra tidak memberikan jawaban akhir setelah memanggil tool.');
+  return { text: combinedText, searchGroups };
+}
+
+/* =========================================================
+   Typewriter effect untuk streaming response
+   ========================================================= */
+function createTypewriter(bubbleEl){
+  let targetText = '';
+  let shownLength = 0;
+  let rafId = null;
+  let doneResolve = null;
+  const CHARS_PER_FRAME = 2; // kecepatan "mengetik" — naikkan untuk lebih cepat
+
+  // Auto-scroll pintar untuk setiap .code-block-scroll di dalam bubble:
+  // aktif secara default, mati kalau user scroll manual ke atas, nyala lagi kalau user scroll balik ke bawah.
+  function setupCodeBlockAutoScroll(){
+    bubbleEl.querySelectorAll('.code-block-scroll').forEach(el => {
+      if (el.dataset.scrollBound) return;
+      el.dataset.scrollBound = '1';
+      el.dataset.autoScroll = '1';
+      el.addEventListener('scroll', () => {
+        const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 20;
+        el.dataset.autoScroll = atBottom ? '1' : '0';
+      });
+    });
+  }
+  function applyCodeBlockAutoScroll(){
+    bubbleEl.querySelectorAll('.code-block-scroll').forEach(el => {
+      if (el.dataset.autoScroll !== '0') {
+        el.scrollTop = el.scrollHeight;
+      }
+    });
+  }
+
+  function tick(){
+    if (shownLength < targetText.length){
+      shownLength = Math.min(shownLength + CHARS_PER_FRAME, targetText.length);
+      bubbleEl.innerHTML = formatText(targetText.slice(0, shownLength)) +
+        (shownLength < targetText.length ? '<span class="cursor-blink">▍</span>' : '');
+      setupCodeBlockAutoScroll();
+      applyCodeBlockAutoScroll();
+      scrollToBottom();
+      rafId = requestAnimationFrame(tick);
+    } else {
+      rafId = null;
+      if (doneResolve) {
+        // finish() sudah menyediakan render akhir (termasuk chip sumber bila ada)
+        const resolveFn = doneResolve;
+        doneResolve = null;
+        resolveFn();
+      } else {
+        bubbleEl.innerHTML = formatText(targetText);
+        setupCodeBlockAutoScroll();
+        applyCodeBlockAutoScroll();
+      }
+    }
+  }
+
+  return {
+    setTarget(text){
+      targetText = text;
+      if (!rafId) rafId = requestAnimationFrame(tick);
+    },
+    // Menunggu animasi mengetik benar-benar selesai menampilkan seluruh targetText,
+    // alih-alih langsung memotong ke teks penuh. searchGroups (opsional) dipakai untuk
+    // menyisipkan chip link sumber tepat setelah bagian jawaban yang terkait.
+    finish(searchGroups){
+      return new Promise((resolve) => {
+        const renderFinal = () => {
+          bubbleEl.innerHTML = searchGroups && searchGroups.length
+            ? injectSourceChips(targetText, searchGroups)
+            : formatText(targetText);
+          setupCodeBlockAutoScroll();
+          applyCodeBlockAutoScroll();
+        };
+        if (shownLength >= targetText.length && !rafId) {
+          renderFinal();
+          resolve();
+        } else {
+          doneResolve = () => { renderFinal(); resolve(); };
+          if (!rafId) rafId = requestAnimationFrame(tick);
+        }
+      });
+    }
+  };
+}
+/* =========================================================
+   Send flow
+   ========================================================= */
+const HTML_CODE_INTENT_KEYWORDS = [
+  'html', 'game', 'canvas', 'ular', 'snake', 'tetris', 'flappy', 'pong',
+  'platformer', 'website', 'web app', 'landing page', 'aplikasi web'
+];
+function isHtmlCodeRequest(text){
+  const q = (text || '').toLowerCase();
+  return HTML_CODE_INTENT_KEYWORDS.some(kw => q.includes(kw));
+}
+
+async function handleSend(){
+  const text = input.value.trim();
+  const images = [...pendingImages];
+  if ((!text && !images.length) || isSending) return;
+
+  isSending = true;
+  sendBtn.disabled = true;
+  input.value = '';
+  pendingImages = [];
+  renderImagePreviews();
+  autoGrow();
+
+  renderMessage('user', text, images);
+  messages.push({ role: 'user', text, images });
+
+  try {
+    await ensureChatDoc(text || 'Foto');
+    await saveMessage('user', text, images);
+  } catch (e) {
+    console.error('Gagal simpan pesan:', e);
+  }
+
+  renderTyping();
+
+  const wantsHtmlCode = isHtmlCodeRequest(text);
+
+  try {
+    let streamRow = null;
+    let typewriter = null;
+
+    if (wantsHtmlCode) {
+      removeTyping();
+      streamRow = renderMessage('model', '', [], true, true);
+      const bubble = streamRow.querySelector('.bubble');
+      typewriter = createTypewriter(bubble);
+    }
+
+    const { text: reply, searchGroups } = await askAstraStream(
+      messages,
+      (partialText) => {
+        if (!streamRow) {
+          removeTyping();
+          streamRow = renderMessage('model', '');
+          const bubble = streamRow.querySelector('.bubble');
+          typewriter = createTypewriter(bubble);
+        }
+        // Begitu Astra mulai mengirim teks jawaban, indikator pencarian web (kalau ada) disembunyikan.
+        hideSearchIndicator(streamRow);
+        typewriter.setTarget(partialText);
+      },
+      (toolName) => {
+        // toolName diisi saat sebuah tool mulai dieksekusi, null saat selesai.
+        if (toolName === 'web_search') {
+          if (!streamRow) {
+            removeTyping();
+            streamRow = renderMessage('model', '');
+            const bubble = streamRow.querySelector('.bubble');
+            typewriter = createTypewriter(bubble);
+          }
+          showSearchIndicator(streamRow);
+        } else if (toolName === null && streamRow) {
+          hideSearchIndicator(streamRow);
+        }
+      }
+    );
+    if (streamRow) hideSearchIndicator(streamRow);
+    // Sisipkan chip link sumber (kalau ada web_search) tepat setelah bagian jawaban yang relevan.
+    if (typewriter) await typewriter.finish(searchGroups);
+    messages.push({ role: 'model', text: reply, searchGroups });
+    saveMessage('model', reply, [], searchGroups).catch(e => console.error(e));
+  } catch (e) {
+    removeTyping();
+    if (e.noKey) {
+      renderMessage('model', 'Kamu belum masukkan API key Gemini. Buka menu "API Key" di sidebar ya.');
+      openApiKeyModal();
+    } else {
+      renderMessage('model', 'Maaf, ada masalah saat menghubungi Astra: ' + e.message);
+    }
+    console.error(e);
+  }
+
+  isSending = false;
+  updateSendState();
+}
+
+sendBtn.addEventListener('click', handleSend);
+input.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    handleSend();
+  }
+});
+
+function autoGrow(){
+  input.style.height = 'auto';
+  input.style.height = Math.min(input.scrollHeight, 160) + 'px';
+}
+function updateSendState(){
+  sendBtn.disabled = (!input.value.trim() && !pendingImages.length) || isSending;
+}
+input.addEventListener('input', () => { autoGrow(); updateSendState(); });
+
+</script>
+</body>
+</html>
