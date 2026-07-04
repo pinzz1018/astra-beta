@@ -1032,6 +1032,16 @@ function setSelectedModel(model){
 function getModelProvider(modelId){
   return ASTRA_MODELS[modelId]?.provider || 'gemini';
 }
+// Menghasilkan potongan teks yang menyebut label model yang SEDANG dipilih user saat ini
+// (misal "Astra 2.0 Flash", "Astra 2.5"). Disuntikkan ke system prompt di setiap request
+// (bukan ditulis statis di template SYSTEM_PROMPT), supaya kalau user ganti model, jawaban
+// Astra soal "kamu model apa" selalu akurat 100% sesuai pilihan yang aktif saat itu juga —
+// tidak pernah basi/salah walau user pindah-pindah model di tengah percakapan.
+function getModelIdentityNote(){
+  const modelId = getSelectedModel();
+  const label = ASTRA_MODELS[modelId]?.label || 'Astra';
+  return `\n\nCATATAN SISTEM (bukan dari pengguna, JANGAN diabaikan): Kamu saat ini sedang berjalan sebagai "${label}" — ini adalah nama/versi model yang SEDANG DIPILIH oleh pengguna lewat menu pemilihan model di aplikasi Astra, dan ini adalah SATU-SATUNYA identitas versi yang benar untuk dijawab. Jika pengguna bertanya "kamu model apa", "kamu versi apa", "sedang pakai model apa sekarang", "model AI apa yang sedang aktif", atau pertanyaan sejenis dalam bahasa apapun, WAJIB jawab tepat "${label}" — jangan pernah menyebut nama model/API/perusahaan lain (misalnya jangan sebut nama model bahasa besar pihak ketiga yang sesungguhnya menjalankanmu di baliknya), dan jangan menyebut versi Astra yang lain selain "${label}". Jawaban ini harus selalu sinkron dengan pilihan model yang sedang aktif; jika pengguna berganti model di kemudian hari dalam percakapan yang sama, catatan ini akan diperbarui otomatis pada request berikutnya dan kamu harus mengikuti nilai yang terbaru, bukan yang disebutkan sebelumnya di riwayat chat.`;
+}
 function getGeminiEndpoint(){
   const model = getSelectedModel();
   return `https://generativelanguage.googleapis.com/v1beta/models/${model}:streamGenerateContent?alt=sse`;
@@ -2343,7 +2353,7 @@ function scrollToBottom(){
 // Satu kali request stream ke Gemini. Mengembalikan { fullText, functionCalls }.
 async function streamOneTurnGemini(contents, onChunk){
   const body = {
-    system_instruction: { parts: [{ text: SYSTEM_PROMPT }] },
+    system_instruction: { parts: [{ text: SYSTEM_PROMPT + getModelIdentityNote() }] },
     contents,
     tools: buildGeminiTools(),
     generationConfig: {
@@ -2417,7 +2427,7 @@ async function streamOneTurnGemini(contents, onChunk){
 // Konversi contents format Gemini (role: user/model/function, parts: [{text}|{inline_data}|{functionCall}|{functionResponse}])
 // menjadi messages format OpenAI-compatible yang dipakai Groq.
 function convertContentsToGroqMessages(contents){
-  const messages = [{ role: 'system', content: SYSTEM_PROMPT_GROQ }];
+  const messages = [{ role: 'system', content: SYSTEM_PROMPT_GROQ + getModelIdentityNote() }];
   for (const turn of contents) {
     if (turn.role === 'user') {
       // Groq (Llama 3.1 8B) tidak mendukung input gambar — ambil teksnya saja.
@@ -2561,7 +2571,7 @@ async function streamOneTurnGroq(contents, onChunk){
 // Beda dengan Groq: OpenRouter (Nemotron 3 Super) mendukung context besar, jadi pakai SYSTEM_PROMPT lengkap
 // dan tetap kirim gambar (format image_url) kalau ada, karena model ini multimodal.
 function convertContentsToOpenRouterMessages(contents){
-  const messages = [{ role: 'system', content: SYSTEM_PROMPT }];
+  const messages = [{ role: 'system', content: SYSTEM_PROMPT + getModelIdentityNote() }];
   for (const turn of contents) {
     if (turn.role === 'user') {
       const parts = turn.parts || [];
