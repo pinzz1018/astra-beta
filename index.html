@@ -4507,11 +4507,11 @@ async function handleSend(){
       typewriter = createTypewriter(bubble);
       window.__astraCurrentAnimateContainer = streamRow.querySelector('.animate-slot') || null;
       // Chip status muncul duluan di atas bubble jawaban, mewakili proses pembuatan filenya.
-      // (Menggantikan indikator "Reading coding guidelines..." lama supaya tidak dobel.)
-      // Chip dimulai dari step "planning" (bukan "reading") — step "reading" hanya dipakai
-      // kalau tool search_docs BENERAN dipanggil, lihat callback onStatus di bawah.
+      // Urutan chip: reading (search_docs) -> planning -> writing (mulai nulis code block)
+      // -> testing (run_code, kalau dipanggil) -> done. Dimulai dari "reading" karena
+      // search_docs WAJIB dipanggil duluan sebelum AI menulis kode apapun.
       artifactChip = createArtifactChip(streamRow.querySelector('.bubble-col'), 'index.html');
-      artifactChip.setStep('planning', false);
+      artifactChip.setStep('reading', false);
     }
 
     const { text: reply, searchGroups } = await askAstraStream(
@@ -4563,10 +4563,18 @@ async function handleSend(){
         } else if (toolName === null && streamRow) {
           hideSearchIndicator(streamRow);
         }
-        // search_docs beneran dipanggil -> chip pindah ke step "reading" yang sesungguhnya.
+        // search_docs beneran dipanggil -> pastikan chip di step "reading".
         if (toolName === 'search_docs' && artifactChip) {
           sawSearchDocsCall = true;
           artifactChip.setStep('reading', false);
+        }
+        // search_docs selesai (toolName balik ke null setelah sempat reading) -> lanjut ke "planning".
+        if (toolName === null && artifactChip && sawSearchDocsCall && !artifactPanelOpened) {
+          artifactChip.setStep('planning', false);
+        }
+        // run_code beneran dipanggil -> chip pindah ke step "testing" (menguji hasil kodingan).
+        if (toolName === 'run_code' && artifactChip) {
+          artifactChip.setStep('testing', false);
         }
       }
     );
