@@ -1388,7 +1388,13 @@ ATURAN WAJIB soal gaya penutup jawaban coding — perhatikan baik-baik kata yang
 Kamu punya tool yang bisa dipanggil:
 1. "search_docs" — untuk mencari catatan best practice/panduan teknis internal sebelum menjawab pertanyaan coding. Lihat ATURAN WAJIB di bawah soal kapan tool ini harus dipanggil (tidak opsional untuk permintaan membuat kode/file).
 2. "run_code" — untuk menjalankan/menguji kode JavaScript secara nyata sebelum kamu sajikan ke pengguna, supaya kode yang kamu berikan benar-benar valid dan tidak error. Panggil ini ketika kamu menulis kode JavaScript yang cukup rumit (logika, fungsi, algoritma) dan ingin memastikan hasilnya benar sebelum menjawab. Jangan panggil untuk kode HTML/CSS murni atau bahasa selain JavaScript (karena run_code hanya mendukung JavaScript).
-3. "edit_code" — ATURAN WAJIB: kalau di pesan pengguna kamu melihat blok "[KODE AKTIF SAAT INI DI PANEL ARTEFAK PENGGUNA ...]", artinya sudah ada file yang sebelumnya berhasil dibuat dan sedang aktif. Kalau permintaan pengguna sekarang adalah REVISI/TAMBAHAN/PERBAIKAN terhadap file itu (misal "tambahin fitur X", "ubah warna Y", "perbaiki bug Z", "hapus bagian ini", "gedein tombolnya", dsb) — kamu WAJIB memanggil tool "edit_code" untuk mengubah HANYA bagian yang relevan, JANGAN menulis ulang seluruh file lewat code block. Setiap edit berisi old_str (potongan kode PERSIS apa adanya dari kode aktif tadi, harus unik) dan new_str (penggantinya). Kamu boleh kirim beberapa edit sekaligus dalam satu panggilan. Kalau tool mengembalikan error (old_str tidak ketemu/ambigu), baca pesan errornya, perbaiki old_str (biasanya perlu konteks baris lebih banyak/lebih spesifik) lalu panggil ulang — JANGAN menyerah dan menulis ulang seluruh file hanya karena satu edit gagal di percobaan pertama. Tulis ulang SELURUH file lewat code block HANYA kalau pengguna memang minta dibuatkan project/file BARU dari nol, atau kalau perubahan yang diminta memang menyangkut sebagian besar struktur file (bukan sekadar revisi kecil).
+3. "edit_code" — ATURAN WAJIB: kalau di pesan pengguna kamu melihat blok "[KODE AKTIF SAAT INI DI PANEL ARTEFAK PENGGUNA ...]", artinya sudah ada file yang sebelumnya berhasil dibuat dan sedang aktif. Tool ini WAJIB dipakai (bukan cuma "boleh") untuk SEMUA jenis pesan berikut selama file itu sedang aktif — perhatikan baik-baik, ini TIDAK terbatas pada kalimat perintah langsung:
+   a) Instruksi eksplisit: "tambahin fitur X", "ubah warna Y", "hapus bagian ini", "gedein tombolnya".
+   b) LAPORAN BUG / KELUHAN, walau tidak berbentuk perintah, TAPI HANYA kalau memang merujuk ke elemen/fitur dari file yang sedang aktif itu (misal: hamburger menu, sidebar, tombol, form, tampilan yang tidak muncul/tidak berfungsi/error PADA APLIKASI yang dibuat Astra) — contoh: "kenapa pas saya pencet hamburger gak muncul sidebar", "kok tombol ini gak berfungsi", "kenapa API key gak kesave", "ini error pas dibuka". Kalimat seperti ini berarti "perbaiki bug tersebut di kode yang sedang aktif" — perlakukan persis sama seperti instruksi "tolong perbaiki bug ini", JANGAN dijawab hanya dengan penjelasan teks, dan JANGAN ditanggapi dengan menulis ulang seluruh file. Cari kemungkinan akar masalahnya di [KODE AKTIF] yang diberikan, lalu langsung panggil edit_code untuk memperbaiki bagian kode yang jadi penyebabnya.
+   PENTING — JANGAN salah trigger: kalau topik pesan pengguna JELAS TIDAK berhubungan dengan aplikasi/kode aktif itu (misalnya sedang membahas hal lain sama sekali seperti belajar melukis/menggambar, pelajaran sekolah, topik umum, dsb, lalu bilang "kok ini gak muncul/gak keliatan"), JANGAN anggap itu laporan bug kode — jawab sesuai konteks aslinya (topik yang sedang dibahas), abaikan keberadaan blok [KODE AKTIF] sepenuhnya untuk pesan itu. Kata-kata "gak muncul"/"gak jalan"/"kok gini" TIDAK otomatis berarti bug kode — hanya jadi laporan bug kalau konteks percakapannya memang sedang membahas aplikasi/fitur dari kode yang aktif.
+   c) Pertanyaan troubleshooting: "apa yang salah dari kode ini", "kenapa ini bisa error" — kalau setelah dianalisis kamu menemukan perbaikan konkret, langsung terapkan lewat edit_code (jangan cuma menjelaskan tanpa memperbaiki, kecuali pengguna secara eksplisit cuma minta penjelasan tanpa minta diperbaiki).
+   Untuk SEMUA kasus di atas: kamu WAJIB memanggil tool "edit_code" untuk mengubah HANYA bagian yang relevan, JANGAN menulis ulang seluruh file lewat code block, walaupun kamu yakin bisa menulis ulang versi yang lebih rapi/lebih baik dari nol — prioritas utama adalah TIDAK membuang perubahan/data yang sudah ada di file itu yang tidak berkaitan dengan masalah yang dilaporkan. Setiap edit berisi old_str (potongan kode PERSIS apa adanya dari kode aktif tadi, harus unik) dan new_str (penggantinya). Kamu boleh kirim beberapa edit sekaligus dalam satu panggilan. Kalau tool mengembalikan error (old_str tidak ketemu/ambigu), baca pesan errornya, perbaiki old_str (biasanya perlu konteks baris lebih banyak/lebih spesifik) lalu panggil ulang — JANGAN menyerah dan menulis ulang seluruh file hanya karena satu edit gagal di percobaan pertama. Tulis ulang SELURUH file lewat code block HANYA kalau pengguna memang eksplisit minta dibuatkan project/file BARU dari nol (bukan revisi/perbaikan file yang sudah ada), atau kalau perubahan yang diminta memang menyangkut sebagian besar/mayoritas struktur file.
+   LANGKAH WAJIB SEBELUM BERTINDAK: setiap kali ada blok [KODE AKTIF] di pesan pengguna, sebelum kamu memanggil tool apapun (edit_code/search_docs/dsb) atau menulis kode, tentukan dulu secara eksplisit satu dari tiga kondisi ini berdasarkan isi pesan pengguna DAN sinyal jumlah giliran sejak kode terakhir disentuh (ada di dalam blok [KODE AKTIF]): (1) JELAS tentang aplikasi/kode aktif ini -> lanjut proses seperti aturan di atas; (2) JELAS bukan tentang aplikasi ini (topik lain) -> abaikan blok kode, jawab sesuai topik aslinya; (3) BENAR-BENAR AMBIGU (kamu tidak bisa menentukan dengan yakin dari kalimat + konteks yang ada) -> HANYA untuk kasus ini, jangan menebak dan jangan langsung bertindak ke kode — cukup tanyakan balik ke pengguna secara singkat dan ramah, misalnya "maksudnya soal aplikasi yang tadi dibuat, atau ini topik baru ya?", lalu tunggu jawabannya sebelum lanjut. Kondisi (3) ini pengecualian yang JARANG dipakai — kebanyakan kasus seharusnya sudah cukup jelas masuk (1) atau (2) dari konteksnya, jangan jadikan bertanya sebagai kebiasaan default.
 3. "web_search" (kalau tersedia) — untuk mencari informasi terkini/faktual di internet. HANYA panggil ini kalau pesan pengguna memang cocok untuk dicari di web: berita terbaru, harga/kurs, jadwal, statistik yang berubah-ubah, fakta terkini, atau apapun yang kamu tidak tahu pasti/berada di luar pengetahuanmu. Kamu sendiri yang menentukan kapan pertanyaan pengguna butuh pencarian web — jangan panggil untuk obrolan biasa, sapaan, opini, atau pertanyaan yang sudah bisa kamu jawab sendiri dengan yakin tanpa perlu data terbaru. Tool ini mungkin tidak selalu tersedia (tergantung pengaturan pengguna); kalau kamu tidak melihat tool ini di daftar tools, jangan mencoba memanggilnya, cukup jawab dengan pengetahuanmu sendiri.
 4. "animate_image" — untuk mengubah foto/gambar yang BARU SAJA diunggah pengguna di percakapan ini menjadi video pendek dengan efek Ken Burns (zoom & pan sinematik halus). Panggil ini HANYA ketika pengguna secara eksplisit minta gambarnya dianimasikan/dijadikan video/digerakkan/dibikin hidup (contoh: "animasikan foto ini", "jadiin video dong gambarnya", "bikin gambar ini bergerak"). Tool ini otomatis memakai gambar terakhir yang diunggah pengguna di percakapan — kalau belum ada gambar yang diunggah sama sekali di percakapan ini, JANGAN panggil tool ini, cukup beri tahu pengguna untuk mengunggah foto dulu lewat tombol lampiran. Setelah tool ini selesai dan berhasil, cukup beri respons singkat yang ramah (video hasilnya akan otomatis ditampilkan oleh aplikasi, jadi jangan menjelaskan ulang secara teknis atau berlebihan).
 5. "replace_background" — untuk mengganti atau menghapus BACKGROUND foto yang BARU SAJA diunggah pengguna (khusus urusan latar belakang saja, bukan mengedit subjek/orangnya). Panggil ini untuk permintaan seperti: "hapus background", "ganti background jadi pantai/Jepang/hitam/putih/dsb", "buang latar belakangnya", "background-nya diganti jadi...". Tool ini pakai remove.bg (gratis, bukan Gemini), jauh lebih hemat kuota dibanding "edit_image", jadi SELALU utamakan tool ini kalau permintaannya murni soal ganti/hapus background. Kalau pengguna menyebut tempat/tema tertentu untuk background barunya (misal "Jepang", "pantai", "luar angkasa"), isi parameter "background_theme_prompt" dengan deskripsi singkat dalam Bahasa Inggris tentang pemandangan/tema itu (contoh: "Mount Fuji Japan scenery with cherry blossoms", "tropical beach sunset") — JANGAN pernah mengisi dengan URL gambar sungguhan, karena background akan digenerate otomatis oleh sistem dari deskripsi itu (bukan kamu yang mencari URL). Kalau pengguna cuma minta "hapus background" tanpa sebutkan tema baru, biarkan parameter ini kosong (background akan jadi transparan). Tool ini otomatis memakai gambar terakhir yang diunggah pengguna — kalau belum ada gambar sama sekali di percakapan ini, JANGAN panggil, cukup minta pengguna upload foto dulu. Tool ini bisa gagal karena kuota bulanan gratis remove.bg habis (50x/bulan) — kalau itu terjadi, sampaikan ke pengguna dengan jujur dan ramah bahwa kuota bulan ini sudah habis dan akan reset bulan depan. Setelah berhasil, cukup beri respons singkat yang ramah (gambar hasilnya otomatis ditampilkan oleh aplikasi).
@@ -1425,7 +1431,7 @@ Kamu juga programmer ahli: tulis kode bersih & langsung bisa dijalankan, pakai c
 Tool yang bisa dipanggil:
 - "search_docs": cari panduan teknis internal. WAJIB dipanggil dulu (query sebutkan jenis/topiknya) SEBELUM menulis kode/file apapun (HTML/CSS/JS/Python/dll) — tidak opsional, berlaku untuk semua permintaan bikin kode walau terlihat sederhana (kalkulator, dashboard, dsb), kecuali sekadar pertanyaan konsep tanpa nulis kode baru. Khusus game/app <canvas>: query juga wajib sebut kata "canvas"/"game" dan jenis gamenya.
 - "run_code": jalankan/uji kode JavaScript sebelum disajikan, untuk kode JS yang cukup rumit (logika, collision detection, perhitungan posisi).
-- "edit_code": WAJIB dipakai (bukan tulis ulang seluruh file) kalau pesan pengguna berisi blok "[KODE AKTIF SAAT INI DI PANEL ARTEFAK PENGGUNA ...]" DAN permintaannya adalah revisi/tambahan/perbaikan kecil (misal "tambahin fitur X", "ubah warna Y", "perbaiki bug Z"). Kirim old_str (potongan PERSIS dari kode aktif, harus unik) + new_str per perubahan, boleh beberapa sekaligus. Kalau error (old_str tidak ketemu/ambigu), perbaiki old_str lalu panggil ulang, jangan langsung nulis ulang semua. Tulis ulang penuh via code block HANYA kalau memang diminta buat project baru dari nol.
+- "edit_code": WAJIB dipakai (bukan tulis ulang seluruh file) kalau pesan pengguna berisi blok "[KODE AKTIF SAAT INI DI PANEL ARTEFAK PENGGUNA ...]" DAN pesannya berupa: (a) instruksi revisi/tambahan/perbaikan ("tambahin fitur X", "ubah warna Y", "perbaiki bug Z"), ATAU (b) LAPORAN BUG/KELUHAN yang JELAS merujuk ke elemen/fitur aplikasi yang sedang aktif itu (bukan topik lain) — misal "kenapa tombol ini gak jalan", "kok sidebar gak muncul", "ini error pas dibuka". JANGAN anggap laporan bug kalau topik pesannya jelas tidak berhubungan dengan aplikasi/kode aktif (misal sedang bahas hal lain lalu bilang "kok ini gak muncul") — untuk itu jawab sesuai konteks aslinya, abaikan blok [KODE AKTIF]. Kalau memang laporan bug yang relevan: cari akar masalahnya di kode aktif lalu langsung edit_code, JANGAN nulis ulang seluruh file walau merasa bisa bikin versi lebih rapi dari nol. Kirim old_str (potongan PERSIS dari kode aktif, harus unik) + new_str per perubahan, boleh beberapa sekaligus. Kalau error (old_str tidak ketemu/ambigu), perbaiki old_str lalu panggil ulang, jangan langsung nulis ulang semua. Tulis ulang penuh via code block HANYA kalau memang diminta buat project/file BARU dari nol. SEBELUM bertindak, tentukan dulu: apakah pesan pengguna JELAS soal aplikasi ini, JELAS topik lain (abaikan blok kode), atau BENAR-BENAR AMBIGU — kalau ambigu (jarang terjadi), tanya balik singkat ke pengguna dulu ("maksudnya soal aplikasi tadi atau topik baru?") sebelum bertindak, jangan menebak.
 - "web_search" (kalau tersedia): cari info terkini/faktual di web. Hanya panggil kalau memang butuh data terbaru (berita, harga, jadwal, dsb), jangan untuk obrolan biasa. Hasilnya sudah terverifikasi & mempertimbangkan tanggal hari ini — percayai sepenuhnya, jangan sebut "hoaks"/"di masa depan". Jangan tulis daftar sumber manual di jawabanmu, itu ditampilkan otomatis oleh aplikasi.
 
 Khusus game/app <canvas>: sebelum kirim kode final, bayangkan membuka file itu di browser — pastikan ada draw/render pertama saat load (bukan menunggu tombol ditekan), canvas.width/height diset via JS (bukan cuma CSS), dan game loop memanggil dirinya sendiri lagi tiap iterasi. Kalau ragu salah satu poin ini, perbaiki dulu sebelum kirim — ini penyebab paling umum canvas tampil kosong/blank.
@@ -1841,6 +1847,11 @@ const artifactTabPreview = document.getElementById('artifact-tab-preview');
 const artifactTabCode = document.getElementById('artifact-tab-code');
 
 let lastRunCode = '';
+// Menghitung berapa giliran (turn) BERTURUT-TURUT terakhir yang TIDAK menyentuh kode aktif sama sekali
+// (tidak nulis kode baru, tidak edit_code). Dipakai sebagai sinyal bantu ke model supaya tidak cuma
+// menebak dari 1 kalimat kosong konteks — kalau angka ini sudah cukup besar, kemungkinan besar topik
+// obrolan sudah pindah dari urusan kode, walau lastRunCode masih tersimpan di panel.
+let turnsSinceLastCodeTouch = 0;
 let artifactActiveTab = 'preview';
 let artifactIsLive = false;          // true selagi Astra masih "menulis" filenya
 let artifactPreviewRefreshTimer = null;
@@ -2909,15 +2920,32 @@ async function openChat(id){
   markActiveHistory(id);
   messages = [];
   messagesEl.innerHTML = '';
+  lastRunCode = ''; // reset dulu, nanti diisi ulang dari kode terakhir yang ditemukan di riwayat (kalau ada)
+  turnsSinceLastCodeTouch = 0; // reset counter topik, dihitung ulang dari histori chat ini
   try {
     const snap = await chatsRef().doc(id).collection('messages').orderBy('createdAt', 'asc').get();
+    let modelTurnsAfterLastCode = 0; // dihitung ulang: berapa giliran model SETELAH kode terakhir ditemukan
     snap.forEach(doc => {
       const m = doc.data();
       const images = m.images || [];
       const searchGroups = m.searchGroups || null;
       messages.push({ role: m.role, text: m.text, images, searchGroups });
       renderMessage(m.role, m.text, images, false, false, searchGroups);
+      // Cari code block ```html ... ``` terakhir di pesan model sepanjang riwayat chat ini,
+      // supaya lastRunCode terisi lagi setelah reload/pindah chat — tanpa ini, fitur edit_code
+      // tidak akan bisa jalan sama sekali untuk chat yang dibuka ulang (Astra akan menganggap
+      // belum ada kode aktif dan terpaksa/salah pilih menulis ulang dari nol).
+      if (m.role === 'model' && m.text) {
+        const match = m.text.match(/```html\s*\n?([\s\S]*?)```/i);
+        if (match) {
+          lastRunCode = match[1].trim();
+          modelTurnsAfterLastCode = 0; // ketemu kode baru, reset hitungan giliran sejak saat itu
+        } else {
+          modelTurnsAfterLastCode++; // giliran model ini tidak mengandung kode -> hitung sebagai "jauh dari kode"
+        }
+      }
     });
+    turnsSinceLastCodeTouch = modelTurnsAfterLastCode;
     if (messages.length) {
       welcomeEl.style.display = 'none';
       messagesEl.style.display = 'block';
@@ -4425,14 +4453,26 @@ async function askAstraStream(history, onChunk, onStatus){
   // dan bisa menyusun old_str yang akurat & unik kalau perlu memanggil edit_code. Disisipkan di
   // sini (bukan dijadikan role terpisah) supaya otomatis ikut terkonversi rapi ke format
   // Groq/OpenRouter tanpa perlu ubah konverternya masing-masing.
+  //
+  // Ikut disisipkan juga sinyal "sudah berapa giliran chat terakhir yang TIDAK menyentuh kode ini",
+  // supaya model tidak menebak relevansi cuma dari 1 kalimat kosong konteks — kalau angkanya besar,
+  // itu petunjuk kuat obrolan sudah pindah topik dari aplikasi ini.
   if (lastRunCode) {
     let lastUserIdx = -1;
     for (let i = contents.length - 1; i >= 0; i--){
       if (contents[i].role === 'user') { lastUserIdx = i; break; }
     }
     if (lastUserIdx !== -1) {
+      let topicHint;
+      if (turnsSinceLastCodeTouch === 0) {
+        topicHint = 'Giliran chat SEBELUMNYA baru saja menyentuh/mengubah kode ini — kemungkinan besar pesan pengguna sekarang masih nyambung ke aplikasi ini.';
+      } else if (turnsSinceLastCodeTouch <= 2) {
+        topicHint = `Sudah ${turnsSinceLastCodeTouch} giliran chat terakhir yang TIDAK menyentuh kode ini — masih mungkin nyambung, tapi cek dulu isi pesan pengguna: apakah memang membahas aplikasi ini, atau sudah pindah topik lain.`;
+      } else {
+        topicHint = `Sudah ${turnsSinceLastCodeTouch} giliran chat terakhir yang TIDAK menyentuh kode ini sama sekali — kemungkinan besar obrolan sudah pindah ke topik lain. JANGAN otomatis anggap pesan pengguna sekarang soal aplikasi ini kecuali isinya memang jelas-jelas merujuk ke aplikasi/kode tersebut.`;
+      }
       contents[lastUserIdx].parts.push({
-        text: `\n\n[KODE AKTIF SAAT INI DI PANEL ARTEFAK PENGGUNA — gunakan ini sebagai referensi persis kalau ingin memanggil edit_code, JANGAN tulis ulang dari nol kalau permintaan pengguna hanya revisi/tambahan kecil]:\n\`\`\`html\n${lastRunCode}\n\`\`\``
+        text: `\n\n[KODE AKTIF SAAT INI DI PANEL ARTEFAK PENGGUNA — gunakan ini sebagai referensi persis kalau ingin memanggil edit_code, JANGAN tulis ulang dari nol kalau permintaan pengguna hanya revisi/tambahan kecil. ${topicHint} Sebelum memanggil tool apapun terkait kode, tentukan dulu di awal jawabanmu (singkat, ke diri sendiri) apakah pesan pengguna kali ini memang tentang aplikasi/kode ini atau bukan — kalau ternyata bukan, abaikan blok kode ini sepenuhnya dan jawab sesuai topik aslinya]:\n\`\`\`html\n${lastRunCode}\n\`\`\``
       });
     }
   }
@@ -4766,6 +4806,7 @@ async function handleSend(){
         artifactMarkFinished(lastExtractedCode.trim());
       }
       if (artifactChip) artifactChip.finish();
+      turnsSinceLastCodeTouch = 0; // giliran ini beneran menyentuh kode (nulis baru)
     } else if (wantsHtmlCode && sawEditCodeCall && artifactPanelOpened) {
       // Kasus edit: lastRunCode sudah diupdate langsung oleh applyCodeEdits()/artifactPushEditedCode(),
       // di sini cukup tandai panel selesai "live" & pindah ke tab preview, tanpa menimpa lastRunCode.
@@ -4773,11 +4814,13 @@ async function handleSend(){
       artifactStatusBadge.classList.remove('active');
       setArtifactTab('preview');
       if (artifactChip) artifactChip.finish();
-    } else if (artifactChip) {
-      // Fallback: chip sempat dibuat (misal search_docs sudah terpanggil untuk konteks kode),
-      // tapi ternyata AI batal menulis kode baru maupun memanggil edit_code di turn ini (misal
-      // akhirnya cuma menjawab dengan teks). Tutup chip supaya tidak menggantung di step "reading".
-      artifactChip.finish();
+      turnsSinceLastCodeTouch = 0; // giliran ini beneran menyentuh kode (edit)
+    } else {
+      // Giliran ini TIDAK menyentuh kode sama sekali (baik chip sempat dibuat lalu batal, maupun
+      // tidak ada chip sama sekali) — naikkan counter supaya giliran berikutnya tahu obrolan
+      // kemungkinan sudah menjauh dari topik aplikasi ini.
+      if (artifactChip) artifactChip.finish();
+      turnsSinceLastCodeTouch++;
     }
 
     // Sisipkan chip link sumber (kalau ada web_search) tepat setelah bagian jawaban yang terkait.
