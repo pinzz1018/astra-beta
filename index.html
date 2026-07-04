@@ -1603,8 +1603,11 @@ function applyLanguage(lang){
   langCurrent.textContent = lang === 'id' ? 'Indonesia' : 'English';
   document.documentElement.lang = lang;
   localStorage.setItem('astra-lang', lang);
-  // Refresh label & deskripsi model picker (teksnya berbeda per bahasa)
-  if (typeof refreshModelUI === 'function') refreshModelUI();
+  // Refresh label & deskripsi model picker (teksnya berbeda per bahasa).
+  // Dibungkus try/catch supaya aman dipanggil kapan pun — termasuk saat load pertama
+  // sebelum elemen-elemen picker model selesai dideklarasikan (menghindari TDZ error
+  // yang bisa menghentikan seluruh eksekusi script dan membuat semua tombol tidak merespons).
+  try { if (typeof refreshModelUI === 'function') refreshModelUI(); } catch (e) { /* elemen belum siap, akan di-refresh lagi nanti */ }
   // Refresh status panel Serper (teksnya berbeda per bahasa) kalau elemennya sudah ada & Serper aktif
   if (typeof renderSerperClearOption === 'function' && typeof isSerperActive === 'function' && isSerperActive()) {
     const el = document.getElementById('serper-status');
@@ -1645,7 +1648,9 @@ langOptions.forEach(opt => {
   });
 });
 
-applyLanguage(getLang());
+// NOTE: applyLanguage(getLang()) dipanggil di bagian bawah script, SETELAH elemen-elemen
+// model picker (modelOptionsContainer dkk) selesai dideklarasikan — supaya refreshModelUI()
+// di dalamnya tidak menabrak temporal dead zone (lihat pemanggilan di dekat refreshModelUI()).
 
 /* =========================================================
    Theme
@@ -1864,6 +1869,10 @@ function refreshModelUI(){
   if (modelTagEl) modelTagEl.textContent = label;
 }
 refreshModelUI();
+// Terapkan bahasa tersimpan SETELAH refreshModelUI & elemen picker model siap,
+// supaya applyLanguage() (yang di dalamnya memanggil refreshModelUI lagi) tidak
+// mengakses modelOptionsContainer dkk sebelum dideklarasikan.
+applyLanguage(getLang());
 
 function openModelPicker(){
   refreshModelUI(); // pastikan daftar & pilihan aktif selalu up-to-date saat dibuka
