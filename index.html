@@ -246,81 +246,111 @@
 
   /* Artifact preview panel — side-sheet, draggable, 2 snap point (setengah/full), 2 tab */
   #artifact-overlay{
-    position: fixed; inset: 0; background: rgba(0,0,0,0.45);
+    position: fixed; inset: 0; background: rgba(20,18,15,0.5);
+    backdrop-filter: blur(2px);
     z-index: 200; display:none; align-items:stretch; justify-content:flex-end;
-    opacity: 0; transition: opacity .18s ease;
+    opacity: 0; transition: opacity .2s ease;
   }
   #artifact-overlay.open{ display:flex; opacity: 1; }
   #artifact-panel{
     width: 100%; max-width: 560px; height: 100%;
     background: var(--surface); display:flex; flex-direction:column;
-    box-shadow: -8px 0 24px rgba(0,0,0,0.18);
+    box-shadow: -1px 0 0 rgba(0,0,0,0.04), -24px 0 48px -12px rgba(20,18,15,0.28);
     transform: translateX(100%);
-    transition: transform .28s cubic-bezier(.32,.72,0,1), width .22s ease, max-width .22s ease;
+    transition: transform .32s cubic-bezier(.22,.68,0,1), width .24s cubic-bezier(.22,.68,0,1), max-width .24s ease;
     position: relative;
   }
   #artifact-overlay.open #artifact-panel{ transform: translateX(0); }
   #artifact-overlay.dragging #artifact-panel{ transition: none; }
   #artifact-panel.expanded{ max-width: 100%; }
 
-  /* Drag handle - hanya relevan/terlihat di layar sempit (mobile) */
+  /* Drag handle - grip yang terasa bisa "dipegang", hanya relevan di layar sempit (mobile) */
   #artifact-drag-handle{
     display:none;
     align-items:center; justify-content:center;
-    padding: 8px 0 4px 0; flex-shrink:0; cursor: grab; touch-action: none;
+    padding: 10px 0 8px 0; flex-shrink:0; cursor: grab; touch-action: none;
   }
-  #artifact-drag-grip{ width:36px; height:4px; border-radius:3px; background: var(--border); }
+  #artifact-drag-handle:active{ cursor: grabbing; }
+  #artifact-drag-grip{
+    width:40px; height:5px; border-radius:4px;
+    background: linear-gradient(90deg, var(--border), var(--text-soft), var(--border));
+    background-size: 200% 100%; background-position: 0% 0;
+    opacity: .7; transition: opacity .15s ease, transform .15s ease;
+  }
+  #artifact-drag-handle:active #artifact-drag-grip{ opacity: 1; transform: scaleX(1.15); }
 
   #artifact-header{
     display:flex; align-items:center; justify-content:space-between;
-    padding: 10px 14px; border-bottom:1px solid var(--border); flex-shrink:0; gap:8px;
+    padding: 13px 16px; border-bottom:1px solid var(--border); flex-shrink:0; gap:10px;
+    background: linear-gradient(180deg, var(--surface), var(--surface) 60%, transparent);
   }
-  #artifact-title{ font-size:13.5px; font-weight:600; color:var(--text); display:flex; align-items:center; gap:8px; min-width:0; overflow:hidden; }
-  #artifact-title-icon{ display:flex; flex-shrink:0; color: var(--accent); }
-  #artifact-title-text{ white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-  #artifact-actions{ display:flex; align-items:center; gap:4px; flex-shrink:0; }
+  #artifact-title{ font-size:13px; font-weight:600; color:var(--text); display:flex; align-items:center; gap:9px; min-width:0; overflow:hidden; }
+  #artifact-title-icon{
+    display:flex; flex-shrink:0; color: var(--accent);
+    width: 26px; height: 26px; border-radius: 7px;
+    background: var(--accent-soft); align-items:center; justify-content:center;
+  }
+  #artifact-title-text{
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+    font-family: 'SF Mono', 'Fira Code', 'Courier New', monospace;
+    font-size: 12.5px; letter-spacing: -0.01em; color: var(--text);
+  }
+  #artifact-actions{ display:flex; align-items:center; gap:2px; flex-shrink:0; }
   .artifact-btn{
     background:transparent; border:none; color: var(--text-soft);
     cursor:pointer; padding: 7px; border-radius:8px; font-size:12.5px;
     display:flex; align-items:center; justify-content:center; gap:5px; font-family: var(--font-body);
+    transition: background .15s ease, color .15s ease, transform .15s ease;
   }
-  .artifact-btn:hover{ background: var(--accent-soft); color: var(--text); }
+  .artifact-btn:hover{ background: var(--accent-soft); color: var(--accent); }
+  .artifact-btn:active{ transform: scale(.92); }
 
   #artifact-tabs{
-    display:flex; align-items:center; gap:4px; padding: 8px 14px; border-bottom:1px solid var(--border); flex-shrink:0;
+    display:flex; align-items:center; gap: 18px; padding: 0 16px; border-bottom:1px solid var(--border);
+    flex-shrink:0; position: relative;
   }
   .artifact-tab{
-    display:flex; align-items:center; gap:6px; padding: 6px 12px; border-radius: 20px;
-    border:1px solid var(--border); background:transparent; color: var(--text-soft);
-    font-size:12.5px; font-family: var(--font-body); cursor:pointer;
+    display:flex; align-items:center; gap:6px; padding: 11px 1px; margin-bottom: -1px;
+    border:none; border-bottom: 2px solid transparent; background:transparent; color: var(--text-soft);
+    font-size:12.5px; font-weight: 500; font-family: var(--font-body); cursor:pointer;
+    transition: color .15s ease;
   }
-  .artifact-tab.active{ background: var(--accent-soft); color: var(--accent); border-color: transparent; }
+  .artifact-tab svg{ opacity: .75; transition: opacity .15s ease; }
+  .artifact-tab.active{ color: var(--accent); border-bottom-color: var(--accent); }
+  .artifact-tab.active svg{ opacity: 1; }
+  .artifact-tab:hover:not(.active){ color: var(--text); }
   #artifact-status-badge{
-    margin-left:auto; display:none; align-items:center; gap:6px; font-size:11.5px; color: var(--text-soft);
+    margin-left:auto; display:none; align-items:center; gap:7px; font-size:11.5px;
+    color: var(--accent); font-weight: 500; letter-spacing: .01em;
   }
   #artifact-status-badge.active{ display:flex; }
   .artifact-status-dot{
     width:6px; height:6px; border-radius:50%; background: var(--accent);
-    animation: artifactPulse 1s ease-in-out infinite;
+    box-shadow: 0 0 0 0 rgba(184,92,56,0.45);
+    animation: artifactStatusRing 1.6s ease-out infinite;
   }
-  @keyframes artifactPulse{ 0%,100%{ opacity:1; } 50%{ opacity:.35; } }
+  @keyframes artifactStatusRing{
+    0%{ box-shadow: 0 0 0 0 rgba(184,92,56,0.45); }
+    70%{ box-shadow: 0 0 0 6px rgba(184,92,56,0); }
+    100%{ box-shadow: 0 0 0 0 rgba(184,92,56,0); }
+  }
 
   #artifact-frame-wrap{ flex:1; position:relative; background:#fff; overflow:hidden; }
   #artifact-frame{ width:100%; height:100%; border:none; }
   #artifact-code-view{
-    position:absolute; inset:0; background:#1E1E1E; overflow:auto; display:none;
+    position:absolute; inset:0; background:#1B1A18; overflow:auto; display:none;
   }
   #artifact-code-view.active{ display:block; }
   #artifact-frame-wrap.showing-code #artifact-frame{ visibility:hidden; }
   #artifact-code-pre{
-    margin:0; padding:16px; font-size:13px; line-height:1.6; color:#E8E6E3;
+    margin:0; padding:20px 18px; font-size:12.5px; line-height:1.7; color:#E8E6E3;
     font-family: 'SF Mono', 'Fira Code', 'Courier New', monospace; white-space:pre-wrap; word-break:break-word;
   }
 
   /* ---------- Mobile: side-sheet draggable dengan 2 snap point ---------- */
   @media (max-width: 640px){
-    #artifact-panel{ max-width: 100%; width: 86vw; }
-    #artifact-panel.expanded{ width: 100%; }
+    #artifact-panel{ max-width: 100%; width: 86vw; border-radius: 18px 0 0 18px; overflow:hidden; }
+    #artifact-panel.expanded{ width: 100%; border-radius: 0; }
     #artifact-drag-handle{ display:flex; }
   }
 
@@ -1166,16 +1196,16 @@
     <div id="artifact-header">
       <div id="artifact-title">
         <span id="artifact-title-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></span>
-        <span id="artifact-title-text">Artefak</span>
+        <span id="artifact-title-text" data-i18n="artifact-default-title">Artefak</span>
       </div>
       <div id="artifact-actions">
-        <button class="artifact-btn" id="artifact-reload" title="Muat ulang">
+        <button class="artifact-btn" id="artifact-reload" data-i18n-title="artifact-reload-title" title="Muat ulang">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 4v6h6"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
         </button>
-        <button class="artifact-btn" id="artifact-expand" title="Perbesar/perkecil">
+        <button class="artifact-btn" id="artifact-expand" data-i18n-title="artifact-expand-title" title="Perbesar/perkecil">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
         </button>
-        <button class="artifact-btn" id="artifact-close" title="Tutup">
+        <button class="artifact-btn" id="artifact-close" data-i18n-title="artifact-close-title" title="Tutup">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
         </button>
       </div>
@@ -1183,13 +1213,13 @@
     <div id="artifact-tabs">
       <button class="artifact-tab active" id="artifact-tab-preview" data-tab="preview">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-        <span>Preview</span>
+        <span data-i18n="artifact-tab-preview">Preview</span>
       </button>
       <button class="artifact-tab" id="artifact-tab-code" data-tab="code">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
-        <span>Code</span>
+        <span data-i18n="artifact-tab-code">Code</span>
       </button>
-      <div id="artifact-status-badge"><span class="artifact-status-dot"></span><span id="artifact-status-text">Menulis…</span></div>
+      <div id="artifact-status-badge"><span class="artifact-status-dot"></span><span id="artifact-status-text" data-i18n="artifact-status-writing">Menulis…</span></div>
     </div>
     <div id="artifact-frame-wrap">
       <iframe id="artifact-frame" sandbox="allow-scripts allow-modals allow-forms allow-pointer-lock allow-popups"></iframe>
@@ -1350,6 +1380,11 @@ Kamu juga adalah seorang programmer/software engineer yang sangat ahli dan berpe
 - Berikan kode yang benar-benar bisa langsung dijalankan/di-copy, hindari pseudocode kecuali memang diminta.
 - Kalau ditanya menjelaskan konsep pemrograman, jelaskan dengan analogi sederhana dulu baru masuk ke detail teknis.
 
+ATURAN WAJIB soal gaya penutup jawaban coding — perhatikan baik-baik kata yang dipakai pengguna:
+- Kalau pengguna memakai kata seperti "kode", "codingan", "script", "syntax", atau semacamnya (TANPA menyebut kata "file" secara eksplisit) — misalnya "buatkan saya codingan html dashboard", "buatkan kode game ular" — maka SETELAH code block, jawab dengan penjelasan singkat isi/fitur kodenya saja. JANGAN sertakan instruksi cara menyimpan sebagai file (jangan tulis langkah seperti "buat file baru bernama index.html", "simpan sebagai .html", "klik dua kali untuk membuka di browser"), karena pengguna tidak memintanya sebagai file.
+- Kalau pengguna secara eksplisit memakai kata "file" (misalnya "buatkan file html-nya", "bikinkan filenya", "buatkan file index.html") — barulah kamu boleh menambahkan instruksi singkat cara menyimpan & membukanya sebagai file.
+- Jika tidak jelas mana yang dimaksud, anggap sebagai permintaan "kode" biasa (opsi yang lebih ringkas), bukan "file".
+
 Kamu punya tool yang bisa dipanggil:
 1. "search_docs" — untuk mencari catatan best practice/panduan teknis internal sebelum menjawab pertanyaan coding yang butuh akurasi tinggi (misalnya soal best practice, pola desain, checklist debugging, keamanan). Panggil ini SEBELUM menjawab pertanyaan coding yang cukup penting/kompleks, supaya jawabanmu lebih akurat dan konsisten. Jangan panggil untuk obrolan biasa, sapaan, atau pertanyaan non-teknis.
 2. "run_code" — untuk menjalankan/menguji kode JavaScript secara nyata sebelum kamu sajikan ke pengguna, supaya kode yang kamu berikan benar-benar valid dan tidak error. Panggil ini ketika kamu menulis kode JavaScript yang cukup rumit (logika, fungsi, algoritma) dan ingin memastikan hasilnya benar sebelum menjawab. Jangan panggil untuk kode HTML/CSS murni atau bahasa selain JavaScript (karena run_code hanya mendukung JavaScript).
@@ -1390,6 +1425,8 @@ Tool yang bisa dipanggil:
 - "web_search" (kalau tersedia): cari info terkini/faktual di web. Hanya panggil kalau memang butuh data terbaru (berita, harga, jadwal, dsb), jangan untuk obrolan biasa. Hasilnya sudah terverifikasi & mempertimbangkan tanggal hari ini — percayai sepenuhnya, jangan sebut "hoaks"/"di masa depan". Jangan tulis daftar sumber manual di jawabanmu, itu ditampilkan otomatis oleh aplikasi.
 
 Khusus game/app <canvas>: sebelum kirim kode final, bayangkan membuka file itu di browser — pastikan ada draw/render pertama saat load (bukan menunggu tombol ditekan), canvas.width/height diset via JS (bukan cuma CSS), dan game loop memanggil dirinya sendiri lagi tiap iterasi. Kalau ragu salah satu poin ini, perbaiki dulu sebelum kirim — ini penyebab paling umum canvas tampil kosong/blank.
+
+Soal penutup jawaban coding: kalau pengguna minta "kode"/"codingan"/"script" (tanpa kata "file"), JANGAN tulis instruksi cara simpan sebagai file (jangan bilang "buat file baru", "simpan sebagai .html", dsb) — cukup jelaskan singkat fiturnya. Instruksi cara simpan file HANYA ditulis kalau pengguna eksplisit menyebut kata "file".
 
 Panggil tool secukupnya sesuai kebutuhan, jangan asal panggil untuk hal yang tidak relevan.`;
 
@@ -1789,12 +1826,13 @@ artifactTabCode.addEventListener('click', () => setArtifactTab('code'));
 
 // Buka panel dengan kode FINAL (dipakai tombol "Run" lama & reload) — tidak live.
 function openArtifact(code, title){
+  const dict = translations[getLang()] || translations.en;
   lastRunCode = code;
   artifactIsLive = false;
   artifactStatusBadge.classList.remove('active');
   artifactFrame.srcdoc = code;
   artifactCodeContent.textContent = code;
-  if (title) artifactTitleText.textContent = title;
+  artifactTitleText.textContent = title || dict['artifact-default-title'];
   setArtifactTab('preview');
   artifactOverlay.classList.add('open');
 }
@@ -1802,11 +1840,12 @@ function openArtifact(code, title){
 // Buka panel dalam mode LIVE (dipanggil begitu Astra mulai menulis file) — preview & code
 // akan terus di-update lewat artifactPushLiveCode() selama proses berlangsung.
 function openArtifactLive(title){
+  const dict = translations[getLang()] || translations.en;
   artifactIsLive = true;
   lastRunCode = '';
   artifactStatusBadge.classList.add('active');
-  artifactStatusText.textContent = 'Menulis…';
-  artifactTitleText.textContent = title || 'Artefak';
+  artifactStatusText.textContent = dict['artifact-status-writing'];
+  artifactTitleText.textContent = title || dict['artifact-default-title'];
   artifactCodeContent.textContent = '';
   artifactFrame.srcdoc = '';
   setArtifactTab('code'); // saat masih ditulis, defaultnya tampilkan tab Code dulu
@@ -1855,8 +1894,14 @@ messagesEl.addEventListener('click', (e) => {
 });
 
 document.getElementById('artifact-close').addEventListener('click', closeArtifact);
-document.getElementById('artifact-reload').addEventListener('click', () => {
+document.getElementById('artifact-reload').addEventListener('click', (e) => {
   if (lastRunCode) artifactFrame.srcdoc = lastRunCode;
+  const icon = e.currentTarget.querySelector('svg');
+  if (icon) {
+    icon.style.transition = 'transform .4s ease';
+    icon.style.transform = 'rotate(-360deg)';
+    setTimeout(() => { icon.style.transition = ''; icon.style.transform = ''; }, 400);
+  }
 });
 document.getElementById('artifact-expand').addEventListener('click', () => {
   artifactPanel.classList.toggle('expanded');
@@ -1914,30 +1959,42 @@ artifactOverlay.addEventListener('click', (e) => {
 })();
 
 /* ---------- Chip status "sedang membuat artefak" di dalam bubble chat ---------- */
-// Tiap tahapan (action) chip punya ikon SVG dan label berbeda.
-const ARTIFACT_ACTION_META = {
-  reading:  { label: 'Membaca coding guidelines', icon: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>' },
-  planning: { label: 'Merancang fitur', icon: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>' },
-  writing:  { label: 'Menulis kode', icon: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="13" y2="17"/></svg>' },
-  reviewing:{ label: 'Mereview kode', icon: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>' },
-  testing:  { label: 'Menguji hasil', icon: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>' },
-  done:     { label: 'Selesai dibuat', icon: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>' }
+// Tiap tahapan (action) chip punya ikon SVG tetap + label yang mengikuti bahasa aktif (i18n).
+// Ikon dipisah dari label supaya svg-nya tidak perlu diduplikasi per bahasa.
+const ARTIFACT_ACTION_ICONS = {
+  reading:  '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>',
+  planning: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>',
+  writing:  '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="13" y2="17"/></svg>',
+  reviewing:'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>',
+  testing:  '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>',
+  done:     '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>'
 };
 const ARTIFACT_STEP_ORDER = ['reading', 'planning', 'writing', 'reviewing', 'testing'];
+const ARTIFACT_STEP_I18N_KEY = {
+  reading: 'artifact-step-reading', planning: 'artifact-step-planning', writing: 'artifact-step-writing',
+  reviewing: 'artifact-step-reviewing', testing: 'artifact-step-testing', done: 'artifact-step-done'
+};
+// Ambil label tahap sesuai bahasa yang sedang aktif SAAT dipanggil (bukan di-cache),
+// supaya selalu sinkron walau pengguna ganti bahasa di tengah percakapan.
+function artifactStepLabel(step){
+  const dict = translations[getLang()] || translations.en;
+  return dict[ARTIFACT_STEP_I18N_KEY[step]] || step;
+}
 
 // Bikin markup chip + panel detail (collapsed by default), lalu kembalikan referensi elemen
 // supaya pemanggil bisa update label/step secara langsung tanpa re-render ulang dari nol.
 function createArtifactChip(container, fileName){
+  const dict = translations[getLang()] || translations.en;
   const wrap = document.createElement('div');
   wrap.className = 'artifact-chip-wrap';
 
   const chip = document.createElement('div');
   chip.className = 'artifact-chip';
   chip.innerHTML =
-    `<div class="artifact-chip-icon working" data-chip-icon>${ARTIFACT_ACTION_META.reading.icon}</div>` +
+    `<div class="artifact-chip-icon working" data-chip-icon>${ARTIFACT_ACTION_ICONS.reading}</div>` +
     `<div class="artifact-chip-body">` +
-      `<div class="artifact-chip-label" data-chip-label>${ARTIFACT_ACTION_META.reading.label}</div>` +
-      `<div class="artifact-chip-sub" data-chip-sub>${fileName || 'Artefak'}</div>` +
+      `<div class="artifact-chip-label" data-chip-label>${artifactStepLabel('reading')}</div>` +
+      `<div class="artifact-chip-sub" data-chip-sub>${fileName || dict['artifact-default-title']}</div>` +
     `</div>` +
     `<div class="artifact-chip-chevron" data-chip-chevron><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></div>`;
 
@@ -1945,7 +2002,7 @@ function createArtifactChip(container, fileName){
   detail.className = 'artifact-chip-detail';
   detail.innerHTML = ARTIFACT_STEP_ORDER.map(step =>
     `<div class="artifact-chip-step" data-step="${step}">` +
-      `<span class="artifact-chip-step-dot"></span><span>${ARTIFACT_ACTION_META[step].label}</span>` +
+      `<span class="artifact-chip-step-dot"></span><span>${artifactStepLabel(step)}</span>` +
     `</div>`
   ).join('');
 
@@ -1967,10 +2024,9 @@ function createArtifactChip(container, fileName){
 
   return {
     setStep(step, isDone){
-      const meta = ARTIFACT_ACTION_META[step];
-      if (!meta) return;
-      chip.querySelector('[data-chip-icon]').innerHTML = meta.icon;
-      chip.querySelector('[data-chip-label]').textContent = meta.label;
+      if (!ARTIFACT_ACTION_ICONS[step]) return;
+      chip.querySelector('[data-chip-icon]').innerHTML = ARTIFACT_ACTION_ICONS[step];
+      chip.querySelector('[data-chip-label]').textContent = artifactStepLabel(step);
       chip.querySelector('[data-chip-icon]').classList.toggle('working', !isDone);
       detail.querySelectorAll('[data-step]').forEach(el => {
         const idx = ARTIFACT_STEP_ORDER.indexOf(el.dataset.step);
@@ -1980,9 +2036,9 @@ function createArtifactChip(container, fileName){
       });
     },
     finish(){
-      chip.querySelector('[data-chip-icon]').innerHTML = ARTIFACT_ACTION_META.done.icon;
+      chip.querySelector('[data-chip-icon]').innerHTML = ARTIFACT_ACTION_ICONS.done;
       chip.querySelector('[data-chip-icon]').classList.remove('working');
-      chip.querySelector('[data-chip-label]').textContent = ARTIFACT_ACTION_META.done.label;
+      chip.querySelector('[data-chip-label]').textContent = artifactStepLabel('done');
       detail.querySelectorAll('[data-step]').forEach(el => el.classList.add('done'));
     }
   };
@@ -2096,7 +2152,20 @@ const translations = {
     "effort-high": "High",
     "effort-desc-low": "Fastest replies, best for simple questions",
     "effort-desc-medium": "Balanced — recommended for everyday coding",
-    "effort-desc-high": "Deepest reasoning, slower & uses more tokens"
+    "effort-desc-high": "Deepest reasoning, slower & uses more tokens",
+    "artifact-default-title": "Artifact",
+    "artifact-reload-title": "Reload",
+    "artifact-expand-title": "Expand/collapse",
+    "artifact-close-title": "Close",
+    "artifact-tab-preview": "Preview",
+    "artifact-tab-code": "Code",
+    "artifact-status-writing": "Writing…",
+    "artifact-step-reading": "Reading coding guidelines",
+    "artifact-step-planning": "Planning features",
+    "artifact-step-writing": "Writing code",
+    "artifact-step-reviewing": "Reviewing code",
+    "artifact-step-testing": "Testing result",
+    "artifact-step-done": "Finished"
   },
   id: {
     "signout": "Keluar",
@@ -2149,7 +2218,20 @@ const translations = {
     "effort-high": "Tinggi",
     "effort-desc-low": "Respons tercepat, cocok untuk pertanyaan simpel",
     "effort-desc-medium": "Seimbang — direkomendasikan untuk coding sehari-hari",
-    "effort-desc-high": "Berpikir paling dalam, lebih lambat & lebih boros token"
+    "effort-desc-high": "Berpikir paling dalam, lebih lambat & lebih boros token",
+    "artifact-default-title": "Artefak",
+    "artifact-reload-title": "Muat ulang",
+    "artifact-expand-title": "Perbesar/perkecil",
+    "artifact-close-title": "Tutup",
+    "artifact-tab-preview": "Preview",
+    "artifact-tab-code": "Code",
+    "artifact-status-writing": "Menulis…",
+    "artifact-step-reading": "Membaca coding guidelines",
+    "artifact-step-planning": "Merancang fitur",
+    "artifact-step-writing": "Menulis kode",
+    "artifact-step-reviewing": "Mereview kode",
+    "artifact-step-testing": "Menguji hasil",
+    "artifact-step-done": "Selesai dibuat"
   }
 };
 
@@ -2164,6 +2246,10 @@ function applyLanguage(lang){
   document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
     const key = el.getAttribute('data-i18n-placeholder');
     if (dict[key] !== undefined) el.placeholder = dict[key];
+  });
+  document.querySelectorAll('[data-i18n-title]').forEach(el => {
+    const key = el.getAttribute('data-i18n-title');
+    if (dict[key] !== undefined) el.title = dict[key];
   });
   const newChatBtnText = document.getElementById('txt-new-chat');
   if (newChatBtnText) newChatBtnText.textContent = dict['new-chat'];
@@ -4402,11 +4488,12 @@ async function handleSend(){
 
     if (wantsHtmlCode) {
       removeTyping();
-      streamRow = renderMessage('model', '', [], true, true);
+      streamRow = renderMessage('model', '', [], true, false);
       const bubble = streamRow.querySelector('.bubble');
       typewriter = createTypewriter(bubble);
       window.__astraCurrentAnimateContainer = streamRow.querySelector('.animate-slot') || null;
       // Chip status muncul duluan di atas bubble jawaban, mewakili proses pembuatan filenya.
+      // (Menggantikan indikator "Reading coding guidelines..." lama supaya tidak dobel.)
       artifactChip = createArtifactChip(streamRow.querySelector('.bubble-col'), 'index.html');
     }
 
