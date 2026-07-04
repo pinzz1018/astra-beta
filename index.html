@@ -678,6 +678,39 @@
   .model-option.selected .model-option-check{ opacity:1; }
   .model-option.selected .model-option-name{ color: var(--accent); }
 
+  /* Baris "Effort" (level thinking) di dalam opsi model — hanya muncul untuk model yang
+     mendukung reasoning (lihat MODEL_EFFORT_SUPPORTED). Diletakkan sebagai sub-row terpisah
+     supaya klik di sini tidak ikut memilih model itu (event.stopPropagation di JS). */
+  .model-effort-row{
+    display:flex; align-items:center; justify-content:space-between; gap:8px;
+    margin-top:8px; padding:8px 10px; border-radius:9px;
+    background: var(--accent-soft); cursor:pointer;
+  }
+  .model-effort-row:hover{ filter:brightness(0.97); }
+  .model-effort-label{ font-size:12px; color:var(--text-soft); font-weight:500; }
+  .model-effort-value{ font-size:12.5px; color:var(--accent); font-weight:700; display:flex; align-items:center; gap:4px; }
+  .model-effort-value svg{ width:14px; height:14px; }
+
+  #effort-picker-overlay{
+    position:fixed; inset:0; background:rgba(0,0,0,0.35);
+    z-index:85; display:flex; align-items:flex-end; justify-content:center;
+    opacity:0; pointer-events:none; transition: opacity .2s ease;
+  }
+  #effort-picker-overlay.open{ opacity:1; pointer-events:auto; }
+  #effort-picker-overlay.hidden{ display:none; }
+  #effort-picker{
+    position:relative; width:100%; max-width:520px;
+    background: var(--surface); border:1px solid var(--border);
+    border-radius:20px 20px 0 0;
+    box-shadow: 0 -6px 24px rgba(0,0,0,0.14);
+    padding: 10px 18px 26px 18px;
+    transform: translateY(100%);
+    transition: transform .25s cubic-bezier(.32,.72,0,1);
+  }
+  #effort-picker-overlay.open #effort-picker{ transform: translateY(0); }
+  #effort-picker.hidden{ display:none; }
+  .effort-option-desc-small{ font-size:12px; color:var(--text-soft); margin-bottom:14px; line-height:1.5; }
+
   #image-preview-row{
     display:flex; gap:8px; flex-wrap:wrap;
   }
@@ -1008,6 +1041,19 @@
               <div id="model-options-container"></div>
             </div>
           </div>
+
+          <div id="effort-picker-overlay" class="hidden">
+            <div id="effort-picker">
+              <div class="plus-menu-handle"></div>
+              <button class="plus-menu-close" id="effort-picker-close-btn">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+              </button>
+              <div class="plus-menu-title" data-i18n="choose-effort">Pilih upaya berpikir</div>
+              <div class="effort-option-desc-small" data-i18n="choose-effort-desc">Seberapa dalam Astra berpikir sebelum menjawab. Semakin tinggi, semakin akurat tapi semakin lambat & boros token.</div>
+
+              <div id="effort-options-container"></div>
+            </div>
+          </div>
         </div>
         <button id="send-btn" disabled>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
@@ -1100,7 +1146,7 @@ function isSerperActive(){ return !!getSerperKey(); }
 // Model Groq/OpenRouter hanya ditampilkan di picker kalau key masing-masing terisi (lihat refreshModelUI/rebuildModelOptions).
 const ASTRA_MODELS = {
   "gemini-2.5-flash": { label: "Astra 1.0 Flash", provider: "gemini", descKey: "model-desc-gemini-2.5-flash" },
-  "gemini-3.5-flash": { label: "Astra 2.0 Flash", provider: "gemini", descKey: "model-desc-gemini-3.5-flash" },
+  "gemini-3.5-flash": { label: "Astra 1.0 Ultra", provider: "gemini", descKey: "model-desc-gemini-3.5-flash" },
   "llama-3.1-8b-instant": { label: "Astra 1.0 Super Flash", provider: "groq", descKey: "model-desc-llama-3.1-8b" },
   "qwen/qwen3-coder:free": { label: "Astra 2.0", provider: "openrouter", descKey: "model-desc-qwen3-coder" },
   "nvidia/nemotron-3-super-120b-a12b:free": { label: "Astra 2.5", provider: "openrouter", descKey: "model-desc-nemotron-3-super" }
@@ -1133,7 +1179,7 @@ function getModelProvider(modelId){
   return ASTRA_MODELS[modelId]?.provider || 'gemini';
 }
 // Menghasilkan potongan teks yang menyebut label model yang SEDANG dipilih user saat ini
-// (misal "Astra 2.0 Flash", "Astra 2.5"). Disuntikkan ke system prompt di setiap request
+// (misal "Astra 1.0 Ultra", "Astra 2.5"). Disuntikkan ke system prompt di setiap request
 // (bukan ditulis statis di template SYSTEM_PROMPT), supaya kalau user ganti model, jawaban
 // Astra soal "kamu model apa" selalu akurat 100% sesuai pilihan yang aktif saat itu juga —
 // tidak pernah basi/salah walau user pindah-pindah model di tengah percakapan.
@@ -1145,6 +1191,47 @@ function getModelIdentityNote(){
 function getGeminiEndpoint(){
   const model = getSelectedModel();
   return `https://generativelanguage.googleapis.com/v1beta/models/${model}:streamGenerateContent?alt=sse`;
+}
+// Astra 1.0 Ultra (gemini-3.5-flash) diposisikan sebagai varian "coding & reasoning" —
+// instruksi ekstra ini HANYA disuntik kalau model aktif itu, supaya model lain (termasuk
+// Astra 1.0 Flash yang notabene lebih hemat) tidak ikut menanggung token tambahan ini.
+// Ditulis singkat & padat (bukan berulang dengan SYSTEM_PROMPT/knowledge base) demi hemat token.
+function getCodingModeNote(){
+  const modelId = getSelectedModel();
+  if (modelId !== 'gemini-3.5-flash') return '';
+  return `\n\nMODE CODING DIPERKUAT (aktif karena model ini "Astra 1.0 Ultra"): Untuk permintaan coding, prioritaskan kebenaran & kelengkapan di atas kecepatan — boleh berpikir lebih dalam sebelum menjawab. Kirim kode yang production-ready dan LENGKAP: walau pengguna tidak menyebut secara eksplisit, tetap sertakan penanganan error/edge case wajar, validasi input dasar, dan bagian UI/UX minimal yang jelas dibutuhkan supaya fitur benar-benar bisa dipakai (contoh: state loading/kosong/error kalau relevan, aksesibilitas dasar, responsif). Jangan menambah kompleksitas di luar cakupan permintaan (jangan tambah fitur besar yang tidak diminta) — cukup pastikan apa yang diminta itu SENDIRI sudah utuh & robust, bukan versi minimal/rapuh. Tetap ringkas dalam penjelasan teks di luar kode; fokus token pada kualitas kode itu sendiri.`;
+}
+// --- Upaya berpikir (thinking effort) ---
+// Hanya model reasoning (saat ini gemini-3.5-flash / "Astra 1.0 Ultra") yang menampilkan
+// opsi ini di UI. Disimpan PER MODEL di localStorage supaya kalau user pindah-pindah model,
+// preferensi effort masing-masing model tidak saling menimpa.
+const MODEL_EFFORT_SUPPORTED = ['gemini-3.5-flash'];
+const EFFORT_LEVELS = ['low', 'medium', 'high'];
+const EFFORT_DEFAULT = 'medium';
+function modelSupportsEffort(modelId){
+  return MODEL_EFFORT_SUPPORTED.includes(modelId);
+}
+function getEffortStorageKey(modelId){
+  return `astra-effort-${modelId}`;
+}
+function getModelEffort(modelId){
+  const id = modelId || getSelectedModel();
+  if (!modelSupportsEffort(id)) return null;
+  const saved = localStorage.getItem(getEffortStorageKey(id));
+  return EFFORT_LEVELS.includes(saved) ? saved : EFFORT_DEFAULT;
+}
+function setModelEffort(modelId, level){
+  if (!EFFORT_LEVELS.includes(level)) return;
+  localStorage.setItem(getEffortStorageKey(modelId), level);
+}
+// thinking_level untuk request Gemini: model reasoning (Astra 1.0 Ultra) memakai level
+// effort yang dipilih user (low/medium/high). Model non-reasoning tidak mendukung parameter
+// ini sama sekali (thinking_level hanya berlaku untuk keluarga Gemini 3.x), jadi return null
+// supaya pemanggil tahu untuk tidak menyertakan thinkingConfig sama sekali di body request.
+function getGeminiThinkingLevel(){
+  const modelId = getSelectedModel();
+  if (!modelSupportsEffort(modelId)) return null;
+  return getModelEffort(modelId); // 'low' | 'medium' | 'high'
 }
 const GROQ_ENDPOINT = 'https://api.groq.com/openai/v1/chat/completions';
 const OPENROUTER_ENDPOINT = 'https://openrouter.ai/api/v1/chat/completions';
@@ -1701,7 +1788,16 @@ const translations = {
     "serper-label": "Optional: enter a Serper API key to search using Serper (more sources). Leave empty to use built-in Google Search.",
     "choose-model": "Choose model",
     "model-1-desc": "Fast and light for everyday chat",
-    "model-2-desc": "Smarter, excels at coding & reasoning"
+    "model-2-desc": "Smarter, excels at coding & reasoning",
+    "effort-row-label": "Thinking effort",
+    "choose-effort": "Choose thinking effort",
+    "choose-effort-desc": "How deeply Astra thinks before answering. Higher is more accurate but slower and uses more tokens.",
+    "effort-low": "Low",
+    "effort-medium": "Medium",
+    "effort-high": "High",
+    "effort-desc-low": "Fastest replies, best for simple questions",
+    "effort-desc-medium": "Balanced — recommended for everyday coding",
+    "effort-desc-high": "Deepest reasoning, slower & uses more tokens"
   },
   id: {
     "signout": "Keluar",
@@ -1745,7 +1841,16 @@ const translations = {
     "serper-label": "Opsional: masukkan Serper API key supaya pencarian web pakai Serper (lebih banyak sumber). Kosongkan untuk pakai Google Search bawaan.",
     "choose-model": "Pilih model",
     "model-1-desc": "Cepat dan ringan untuk obrolan sehari-hari",
-    "model-2-desc": "Lebih pintar, unggul untuk coding & penalaran"
+    "model-2-desc": "Lebih pintar, unggul untuk coding & penalaran",
+    "effort-row-label": "Upaya berpikir",
+    "choose-effort": "Pilih upaya berpikir",
+    "choose-effort-desc": "Seberapa dalam Astra berpikir sebelum menjawab. Semakin tinggi, semakin akurat tapi semakin lambat & boros token.",
+    "effort-low": "Rendah",
+    "effort-medium": "Sedang",
+    "effort-high": "Tinggi",
+    "effort-desc-low": "Respons tercepat, cocok untuk pertanyaan simpel",
+    "effort-desc-medium": "Seimbang — direkomendasikan untuk coding sehari-hari",
+    "effort-desc-high": "Berpikir paling dalam, lebih lambat & lebih boros token"
   }
 };
 
@@ -1775,6 +1880,9 @@ function applyLanguage(lang){
   // sebelum elemen-elemen picker model selesai dideklarasikan (menghindari TDZ error
   // yang bisa menghentikan seluruh eksekusi script dan membuat semua tombol tidak merespons).
   try { if (typeof refreshModelUI === 'function') refreshModelUI(); } catch (e) { /* elemen belum siap, akan di-refresh lagi nanti */ }
+  // Refresh sheet effort juga (kalau sedang terbuka / sudah pernah dibuka), supaya label
+  // low/medium/high dan deskripsinya ikut berubah saat bahasa diganti.
+  try { if (typeof rebuildEffortOptions === 'function') rebuildEffortOptions(); } catch (e) { /* elemen belum siap */ }
   // Refresh status panel Serper (teksnya berbeda per bahasa) kalau elemennya sudah ada & Serper aktif
   if (typeof renderSerperClearOption === 'function' && typeof isSerperActive === 'function' && isSerperActive()) {
     const el = document.getElementById('serper-status');
@@ -1980,7 +2088,7 @@ serperSaveBtn.addEventListener('click', async () => {
 });
 
 /* =========================================================
-   Model picker (Astra 1.0 Flash / Astra 2.0 Flash)
+   Model picker (Astra 1.0 Flash / Astra 1.0 Ultra)
    ========================================================= */
 const modelSelectorBtn = document.getElementById('model-selector');
 const modelSelectorLabel = document.getElementById('model-selector-label');
@@ -2015,18 +2123,38 @@ function rebuildModelOptions(){
     const el = document.createElement('div');
     el.className = 'model-option' + (modelId === current ? ' selected' : '');
     el.dataset.model = modelId;
+    const effortRowHtml = modelSupportsEffort(modelId) ? `
+      <div class="model-effort-row" data-effort-for="${modelId}">
+        <span class="model-effort-label" data-i18n="effort-row-label">Upaya berpikir</span>
+        <span class="model-effort-value">
+          <span data-effort-value-text>${dict['effort-' + getModelEffort(modelId)] || getModelEffort(modelId)}</span>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 6l6 6-6 6"/></svg>
+        </span>
+      </div>` : '';
     el.innerHTML = `
-      <div class="model-option-text">
-        <div class="model-option-name">${info.label}</div>
-        <div class="model-option-desc">${dict[info.descKey] || ''}</div>
+      <div class="model-option-text" style="flex:1;">
+        <div style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
+          <div>
+            <div class="model-option-name">${info.label}</div>
+            <div class="model-option-desc">${dict[info.descKey] || ''}</div>
+          </div>
+          ${checkSvgMarkup()}
+        </div>
+        ${effortRowHtml}
       </div>
-      ${checkSvgMarkup()}
     `;
     el.addEventListener('click', () => {
       setSelectedModel(modelId);
       refreshModelUI();
       closeModelPicker();
     });
+    const effortRowEl = el.querySelector('.model-effort-row');
+    if (effortRowEl) {
+      effortRowEl.addEventListener('click', (e) => {
+        e.stopPropagation(); // jangan ikut memilih model, cuma buka sheet effort
+        openEffortPicker(modelId);
+      });
+    }
     modelOptionsContainer.appendChild(el);
   });
 }
@@ -2060,6 +2188,52 @@ modelSelectorBtn.addEventListener('click', (e) => {
 modelPickerCloseBtn.addEventListener('click', () => closeModelPicker());
 modelPickerOverlay.addEventListener('click', (e) => {
   if (e.target === modelPickerOverlay) closeModelPicker();
+});
+
+/* ---------- Effort picker (level thinking per model) ---------- */
+const effortPickerOverlay = document.getElementById('effort-picker-overlay');
+const effortPickerCloseBtn = document.getElementById('effort-picker-close-btn');
+const effortOptionsContainer = document.getElementById('effort-options-container');
+let effortPickerTargetModel = null; // model yang sedang diatur effort-nya di sheet ini
+
+function rebuildEffortOptions(){
+  if (!effortOptionsContainer || !effortPickerTargetModel) return;
+  effortOptionsContainer.innerHTML = '';
+  const dict = translations[getLang()] || translations.en;
+  const current = getModelEffort(effortPickerTargetModel);
+  EFFORT_LEVELS.forEach(level => {
+    const el = document.createElement('div');
+    el.className = 'model-option' + (level === current ? ' selected' : '');
+    el.innerHTML = `
+      <div class="model-option-text">
+        <div class="model-option-name">${dict['effort-' + level] || level}</div>
+        <div class="model-option-desc">${dict['effort-desc-' + level] || ''}</div>
+      </div>
+      ${checkSvgMarkup()}
+    `;
+    el.addEventListener('click', () => {
+      setModelEffort(effortPickerTargetModel, level);
+      rebuildEffortOptions();
+      rebuildModelOptions(); // supaya teks effort di baris model ikut ter-update
+      closeEffortPicker();
+    });
+    effortOptionsContainer.appendChild(el);
+  });
+}
+
+function openEffortPicker(modelId){
+  effortPickerTargetModel = modelId;
+  rebuildEffortOptions();
+  effortPickerOverlay.classList.remove('hidden');
+  requestAnimationFrame(() => effortPickerOverlay.classList.add('open'));
+}
+function closeEffortPicker(){
+  effortPickerOverlay.classList.remove('open');
+  setTimeout(() => effortPickerOverlay.classList.add('hidden'), 200);
+}
+effortPickerCloseBtn.addEventListener('click', () => closeEffortPicker());
+effortPickerOverlay.addEventListener('click', (e) => {
+  if (e.target === effortPickerOverlay) closeEffortPicker();
 });
 
 /* ---------- Sources bottom sheet (daftar lengkap sumber web_search) ---------- */
@@ -2515,14 +2689,24 @@ function scrollToBottom(){
    ========================================================= */
 // Satu kali request stream ke Gemini. Mengembalikan { fullText, functionCalls }.
 async function streamOneTurnGemini(contents, onChunk){
+  // thinkingConfig berbeda tergantung keluarga model:
+  // - gemini-3.5-flash (Astra 1.0 Ultra, keluarga Gemini 3.x) -> pakai thinking_level (low/medium/high),
+  //   ini parameter yang direkomendasikan Google untuk Gemini 3.x, bukan thinkingBudget yang sudah legacy.
+  // - gemini-2.5-flash (Astra 1.0 Flash, keluarga Gemini 2.5) -> thinking_level TIDAK didukung sama sekali
+  //   (request akan error kalau dipaksa pakai), jadi tetap pakai thinkingBudget numerik kecil biar hemat.
+  const thinkingLevel = getGeminiThinkingLevel();
+  const thinkingConfig = thinkingLevel
+    ? { thinking_level: thinkingLevel }
+    : { thinkingBudget: 1024 };
+
   const body = {
-    system_instruction: { parts: [{ text: SYSTEM_PROMPT + getModelIdentityNote() }] },
+    system_instruction: { parts: [{ text: SYSTEM_PROMPT + getModelIdentityNote() + getCodingModeNote() }] },
     contents,
     tools: buildGeminiTools(),
     generationConfig: {
       temperature: 0.7,
       maxOutputTokens: 65536,
-      thinkingConfig: { thinkingBudget: 1024 }
+      thinkingConfig
     }
   };
 
@@ -3480,9 +3664,14 @@ async function runReplaceBackgroundTool(args){
   const themePrompt = (args?.background_theme_prompt || '').trim();
   // URL background dibuat otomatis lewat Pollinations.ai (image generation gratis, tanpa API key,
   // tanpa perlu AI menebak-nebak URL gambar asli yang bisa saja tidak valid/broken).
+  // Prompt tambahan dirancang supaya komposisi background "aman" ditempeli subjek asli:
+  // sudut mata normal (bukan dari atas/drone), tanah/lantai rata di bagian bawah, tidak ada
+  // objek besar di area depan (biar tidak menabrak posisi kaki subjek), tanpa orang lain.
+  // Ini tidak menghilangkan sepenuhnya masalah "kaki mengambang" (remove.bg hanya cut-paste
+  // 2D, tidak paham perspektif), tapi meminimalkan risikonya.
   // Kalau themePrompt kosong (user cuma minta "hapus background" saja), bgImageUrl dibiarkan null -> transparan.
   const bgImageUrl = themePrompt
-    ? `https://image.pollinations.ai/prompt/${encodeURIComponent(themePrompt + ', background scenery, wide shot, no people, no text, no watermark')}?width=1024&height=1024&nologo=true`
+    ? `https://image.pollinations.ai/prompt/${encodeURIComponent(themePrompt + ', background scenery, eye-level shot, flat open ground in foreground, no foreground objects, no people, no text, no watermark, photorealistic')}?width=1024&height=1024&nologo=true`
     : null;
 
   const container = window.__astraCurrentAnimateContainer;
@@ -3538,7 +3727,10 @@ async function runReplaceBackgroundTool(args){
     if (usedFallbackTransparent) {
       return JSON.stringify({ success: true, message: 'Background gambar berhasil DIHAPUS (jadi transparan) dan sudah ditampilkan ke pengguna. Catatan: mengganti background dengan tema baru sedang bermasalah, jadi cuma berhasil menghapusnya saja — beri tahu pengguna soal ini dengan jujur dan tawarkan coba lagi.' });
     }
-    return JSON.stringify({ success: true, message: 'Background gambar berhasil diganti/dihapus dan sudah ditampilkan ke pengguna di chat.' });
+    if (bgImageUrl) {
+      return JSON.stringify({ success: true, message: 'Background gambar berhasil diganti dan sudah ditampilkan ke pengguna di chat. PENTING: tool ini menempel foto asli ke background baru secara sederhana (bukan AI generatif penuh), jadi posisi/perspektif subjek kadang tidak pas 100% dengan background barunya (misal kaki terlihat sedikit mengambang) — sebutkan hal ini secara singkat dan ramah ke pengguna kalau relevan, tanpa terdengar seperti permintaan maaf berlebihan.' });
+    }
+    return JSON.stringify({ success: true, message: 'Background gambar berhasil dihapus (jadi transparan) dan sudah ditampilkan ke pengguna di chat.' });
   } catch (e) {
     if (fakeProgressTimer) clearInterval(fakeProgressTimer);
     if (progressCard) progressCard.remove();
