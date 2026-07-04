@@ -753,11 +753,15 @@
     <h2 class="apikey-title" data-i18n="apikey-title">Gemini API Key</h2>
     <p class="apikey-desc" data-i18n="apikey-desc">Masukkan API key Gemini kamu (format AQ.Ab... atau AIza...). Key disimpan hanya di perangkat ini, tidak dikirim ke server manapun selain langsung ke Google.</p>
     <input id="apikey-input" type="text" placeholder="AQ.Ab... atau AIzaSy..." class="apikey-input">
+    <h2 class="apikey-title" style="margin-top:18px;" data-i18n="apikey-groq-title">Groq API Key</h2>
+    <p class="apikey-desc" data-i18n="apikey-groq-desc">Opsional: masukkan API key Groq untuk memakai model Llama 3.1 8B Instant (lebih cepat/murah). Key disimpan hanya di perangkat ini.</p>
+    <input id="apikey-groq-input" type="text" placeholder="gsk_..." class="apikey-input">
     <div style="display:flex;gap:8px;margin-top:16px;">
       <button id="apikey-cancel" class="apikey-btn-secondary" data-i18n="cancel">Batal</button>
       <button id="apikey-save" class="apikey-btn-primary" data-i18n="save">Simpan</button>
     </div>
     <p class="apikey-hint" data-i18n="apikey-hint">Belum punya key? Buat gratis di <span style="color:var(--accent);">aistudio.google.com/app/apikey</span></p>
+    <p class="apikey-hint" data-i18n="apikey-groq-hint">Groq key gratis di <span style="color:var(--accent);">console.groq.com/keys</span></p>
   </div>
 </div>
 
@@ -901,21 +905,7 @@
               </button>
               <div class="plus-menu-title" data-i18n="choose-model">Pilih model</div>
 
-              <div class="model-option" data-model="gemini-2.5-flash" data-label="Astra 1.0 Flash">
-                <div class="model-option-text">
-                  <div class="model-option-name">Astra 1.0 Flash</div>
-                  <div class="model-option-desc" data-i18n="model-1-desc">Cepat dan ringan untuk obrolan sehari-hari</div>
-                </div>
-                <svg class="model-option-check" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg>
-              </div>
-
-              <div class="model-option" data-model="gemini-3.5-flash" data-label="Astra 2.0 Flash">
-                <div class="model-option-text">
-                  <div class="model-option-name">Astra 2.0 Flash</div>
-                  <div class="model-option-desc" data-i18n="model-2-desc">Lebih pintar, unggul untuk coding & penalaran</div>
-                </div>
-                <svg class="model-option-check" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg>
-              </div>
+              <div id="model-options-container"></div>
             </div>
           </div>
         </div>
@@ -984,6 +974,10 @@ const firebaseConfig = {
 function getGeminiKey(){ return localStorage.getItem('astra-gemini-key') || ''; }
 function setGeminiKey(key){ localStorage.setItem('astra-gemini-key', key.trim()); }
 
+// --- Groq API key: DIISI USER lewat menu "API Key" di sidebar, disimpan di localStorage ---
+function getGroqKey(){ return localStorage.getItem('astra-groq-key') || ''; }
+function setGroqKey(key){ localStorage.setItem('astra-groq-key', key.trim()); }
+
 // --- Toggle pencarian web: kalau mati, tool web_search tidak pernah didaftarkan ke Gemini ---
 function isWebSearchEnabled(){ return localStorage.getItem('astra-websearch') !== 'off'; }
 function setWebSearchEnabled(enabled){ localStorage.setItem('astra-websearch', enabled ? 'on' : 'off'); }
@@ -993,21 +987,36 @@ function getSerperKey(){ return localStorage.getItem('astra-serper-key') || ''; 
 function setSerperKey(key){ localStorage.setItem('astra-serper-key', key.trim()); }
 function clearSerperKey(){ localStorage.removeItem('astra-serper-key'); }
 function isSerperActive(){ return !!getSerperKey(); }
+
+// Semua model yang didukung. `provider` menentukan jalur request yang dipakai (lihat streamOneTurn).
+// Model Groq hanya ditampilkan di picker kalau getGroqKey() terisi (lihat refreshModelUI/rebuildModelOptions).
 const ASTRA_MODELS = {
-  "gemini-2.5-flash": { label: "Astra 1.0 Flash" },
-  "gemini-3.5-flash": { label: "Astra 2.0 Flash" }
+  "gemini-2.5-flash": { label: "Astra 1.0 Flash", provider: "gemini", desc: "Cepat dan ringan untuk obrolan sehari-hari" },
+  "gemini-3.5-flash": { label: "Astra 2.0 Flash", provider: "gemini", desc: "Lebih pintar, unggul untuk coding & penalaran" },
+  "llama-3.1-8b-instant": { label: "Astra Groq Instant", provider: "groq", desc: "Model Llama 3.1 8B via Groq — super cepat" }
 };
+function isModelAvailable(modelId){
+  const info = ASTRA_MODELS[modelId];
+  if (!info) return false;
+  if (info.provider === 'groq') return !!getGroqKey();
+  return true; // model gemini selalu dianggap tersedia (validasi key dilakukan saat request)
+}
 function getSelectedModel(){
   const saved = localStorage.getItem('astra-model');
-  return (saved && ASTRA_MODELS[saved]) ? saved : "gemini-2.5-flash";
+  if (saved && ASTRA_MODELS[saved] && isModelAvailable(saved)) return saved;
+  return "gemini-2.5-flash";
 }
 function setSelectedModel(model){
   localStorage.setItem('astra-model', model);
+}
+function getModelProvider(modelId){
+  return ASTRA_MODELS[modelId]?.provider || 'gemini';
 }
 function getGeminiEndpoint(){
   const model = getSelectedModel();
   return `https://generativelanguage.googleapis.com/v1beta/models/${model}:streamGenerateContent?alt=sse`;
 }
+const GROQ_ENDPOINT = 'https://api.groq.com/openai/v1/chat/completions';
 
 const SYSTEM_PROMPT = `Kamu adalah Astra, asisten AI yang ramah, jujur, dan membantu. Jawab dengan jelas dan natural. Gunakan Bahasa Indonesia kecuali diminta bahasa lain.
 
@@ -1243,7 +1252,13 @@ const GEMINI_WEB_SEARCH_DECLARATION = {
 // tool "web_search" TIDAK didaftarkan sama sekali, sehingga Gemini tidak akan pernah bisa memanggilnya.
 function buildGeminiTools(){
   const decls = [...GEMINI_BASE_FUNCTION_DECLARATIONS];
-  if (isWebSearchEnabled()) {
+  // web_search hanya didaftarkan kalau toggle aktif DAN provider yang sedang dipakai punya jalur
+  // pencarian yang valid: Gemini selalu bisa (grounding bawaan atau Serper), sedangkan Groq
+  // butuh Serper key (Groq tidak punya web search bawaan) — kalau tidak ada, tool disembunyikan
+  // sepenuhnya supaya model tidak pernah mencoba memanggil tool yang pasti gagal.
+  const provider = getModelProvider(getSelectedModel());
+  const webSearchUsable = provider === 'gemini' || (provider === 'groq' && isSerperActive());
+  if (isWebSearchEnabled() && webSearchUsable) {
     decls.push(GEMINI_WEB_SEARCH_DECLARATION);
   }
   return [{ function_declarations: decls }];
@@ -1316,6 +1331,7 @@ const themeIcon = document.getElementById('theme-icon');
 const apikeyBtn = document.getElementById('apikey-btn');
 const apikeyOverlay = document.getElementById('apikey-overlay');
 const apikeyInput = document.getElementById('apikey-input');
+const apikeyGroqInput = document.getElementById('apikey-groq-input');
 const apikeyCancel = document.getElementById('apikey-cancel');
 const apikeySave = document.getElementById('apikey-save');
 
@@ -1443,6 +1459,9 @@ const translations = {
     "apikey-title": "Gemini API Key",
     "apikey-desc": "Enter your Gemini API key (format AQ.Ab... or AIza...). The key is stored only on this device and is never sent anywhere except directly to Google.",
     "apikey-hint": "Don't have a key yet? Get one free at",
+    "apikey-groq-title": "Groq API Key",
+    "apikey-groq-desc": "Optional: enter a Groq API key to use the Llama 3.1 8B Instant model (faster/cheaper). The key is stored only on this device.",
+    "apikey-groq-hint": "Get a free Groq key at",
     "cancel": "Cancel",
     "save": "Save",
     "welcome-title": "How can I help you today?",
@@ -1472,6 +1491,9 @@ const translations = {
     "apikey-title": "Gemini API Key",
     "apikey-desc": "Masukkan API key Gemini kamu (format AQ.Ab... atau AIza...). Key disimpan hanya di perangkat ini, tidak dikirim ke server manapun selain langsung ke Google.",
     "apikey-hint": "Belum punya key? Buat gratis di",
+    "apikey-groq-title": "Groq API Key",
+    "apikey-groq-desc": "Opsional: masukkan API key Groq untuk memakai model Llama 3.1 8B Instant (lebih cepat/murah). Key disimpan hanya di perangkat ini.",
+    "apikey-groq-hint": "Groq key gratis di",
     "cancel": "Batal",
     "save": "Simpan",
     "welcome-title": "Ada yang bisa dibantu?",
@@ -1577,6 +1599,7 @@ applyTheme(localStorage.getItem('astra-theme') || 'light');
    ========================================================= */
 function openApiKeyModal(){
   apikeyInput.value = getGeminiKey();
+  apikeyGroqInput.value = getGroqKey();
   apikeyOverlay.classList.remove('hidden');
   sidebar.classList.remove('show');
   scrim.classList.remove('show');
@@ -1589,10 +1612,13 @@ apikeyCancel.addEventListener('click', closeApiKeyModal);
 apikeyOverlay.addEventListener('click', (e) => { if (e.target === apikeyOverlay) closeApiKeyModal(); });
 apikeySave.addEventListener('click', () => {
   const val = apikeyInput.value.trim();
-  if (!val) { alert('Isi dulu API key-nya, atau tekan Batal.'); return; }
+  const groqVal = apikeyGroqInput.value.trim();
+  if (!val) { alert('Isi dulu API key Gemini-nya, atau tekan Batal.'); return; }
   setGeminiKey(val);
+  setGroqKey(groqVal); // boleh kosong (opsional) — mengosongkan berarti model Groq disembunyikan lagi
   closeApiKeyModal();
   updateSendState();
+  if (typeof refreshModelUI === 'function') refreshModelUI();
 });
 
 /* =========================================================
@@ -1714,20 +1740,51 @@ const modelSelectorLabel = document.getElementById('model-selector-label');
 const modelPickerOverlay = document.getElementById('model-picker-overlay');
 const modelPickerCloseBtn = document.getElementById('model-picker-close-btn');
 const modelTagEl = document.getElementById('model-tag');
-const modelOptionEls = Array.from(document.querySelectorAll('.model-option'));
+const modelOptionsContainer = document.getElementById('model-options-container');
+
+function checkSvgMarkup(){
+  return '<svg class="model-option-check" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg>';
+}
+
+// Bangun ulang daftar opsi model di dalam picker. Dipanggil saat load dan tiap kali
+// API key (khususnya Groq) berubah, supaya model Groq muncul/hilang secara live tanpa reload.
+function rebuildModelOptions(){
+  if (!modelOptionsContainer) return;
+  const current = getSelectedModel();
+  modelOptionsContainer.innerHTML = '';
+  Object.keys(ASTRA_MODELS).forEach(modelId => {
+    if (!isModelAvailable(modelId)) return; // sembunyikan model Groq kalau belum ada key-nya
+    const info = ASTRA_MODELS[modelId];
+    const el = document.createElement('div');
+    el.className = 'model-option' + (modelId === current ? ' selected' : '');
+    el.dataset.model = modelId;
+    el.innerHTML = `
+      <div class="model-option-text">
+        <div class="model-option-name">${info.label}</div>
+        <div class="model-option-desc">${info.desc}</div>
+      </div>
+      ${checkSvgMarkup()}
+    `;
+    el.addEventListener('click', () => {
+      setSelectedModel(modelId);
+      refreshModelUI();
+      closeModelPicker();
+    });
+    modelOptionsContainer.appendChild(el);
+  });
+}
 
 function refreshModelUI(){
+  rebuildModelOptions();
   const current = getSelectedModel();
   const label = ASTRA_MODELS[current]?.label || 'Astra 1.0 Flash';
   modelSelectorLabel.textContent = label;
   if (modelTagEl) modelTagEl.textContent = label;
-  modelOptionEls.forEach(opt => {
-    opt.classList.toggle('selected', opt.dataset.model === current);
-  });
 }
 refreshModelUI();
 
 function openModelPicker(){
+  refreshModelUI(); // pastikan daftar & pilihan aktif selalu up-to-date saat dibuka
   modelPickerOverlay.classList.remove('hidden');
   requestAnimationFrame(() => modelPickerOverlay.classList.add('open'));
 }
@@ -1742,13 +1799,6 @@ modelSelectorBtn.addEventListener('click', (e) => {
 modelPickerCloseBtn.addEventListener('click', () => closeModelPicker());
 modelPickerOverlay.addEventListener('click', (e) => {
   if (e.target === modelPickerOverlay) closeModelPicker();
-});
-modelOptionEls.forEach(opt => {
-  opt.addEventListener('click', () => {
-    setSelectedModel(opt.dataset.model);
-    refreshModelUI();
-    closeModelPicker();
-  });
 });
 
 /* ---------- Sources bottom sheet (daftar lengkap sumber web_search) ---------- */
@@ -1768,13 +1818,49 @@ function fileToBase64(file){
   });
 }
 
+// Kompres & resize gambar sebelum dikirim ke API, supaya ukuran base64-nya kecil
+// dan tidak boros token tiap kali history direplay ke Gemini.
+const IMAGE_MAX_DIMENSION = 1280; // px, sisi terpanjang
+const IMAGE_JPEG_QUALITY = 0.7;   // 0-1
+function compressImageDataUrl(dataUrl){
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      let { width, height } = img;
+      if (width > IMAGE_MAX_DIMENSION || height > IMAGE_MAX_DIMENSION) {
+        if (width >= height) {
+          height = Math.round(height * (IMAGE_MAX_DIMENSION / width));
+          width = IMAGE_MAX_DIMENSION;
+        } else {
+          width = Math.round(width * (IMAGE_MAX_DIMENSION / height));
+          height = IMAGE_MAX_DIMENSION;
+        }
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, width, height);
+      try {
+        const compressed = canvas.toDataURL('image/jpeg', IMAGE_JPEG_QUALITY);
+        resolve(compressed);
+      } catch (e) {
+        resolve(dataUrl); // fallback kalau gagal (misal CORS/taint canvas)
+      }
+    };
+    img.onerror = () => resolve(dataUrl); // fallback ke aslinya kalau gagal load
+    img.src = dataUrl;
+  });
+}
+
 imageInput.addEventListener('change', async () => {
   const files = Array.from(imageInput.files || []);
   for (const file of files) {
     if (!file.type.startsWith('image/')) continue;
     try {
       const dataUrl = await fileToBase64(file);
-      pendingImages.push(dataUrl);
+      const compressed = await compressImageDataUrl(dataUrl);
+      pendingImages.push(compressed);
       renderImagePreviews();
     } catch (e) {
       console.error('Gagal baca gambar:', e);
@@ -1790,7 +1876,8 @@ cameraInput.addEventListener('change', async () => {
     if (!file.type.startsWith('image/')) continue;
     try {
       const dataUrl = await fileToBase64(file);
-      pendingImages.push(dataUrl);
+      const compressed = await compressImageDataUrl(dataUrl);
+      pendingImages.push(compressed);
       renderImagePreviews();
     } catch (e) {
       console.error('Gagal baca gambar:', e);
@@ -2163,7 +2250,7 @@ function scrollToBottom(){
    Gemini API call (streaming via SSE)
    ========================================================= */
 // Satu kali request stream ke Gemini. Mengembalikan { fullText, functionCalls }.
-async function streamOneTurn(contents, onChunk){
+async function streamOneTurnGemini(contents, onChunk){
   const body = {
     system_instruction: { parts: [{ text: SYSTEM_PROMPT }] },
     contents,
@@ -2236,9 +2323,159 @@ async function streamOneTurn(contents, onChunk){
   return { fullText, functionCalls };
 }
 
+// Konversi contents format Gemini (role: user/model/function, parts: [{text}|{inline_data}|{functionCall}|{functionResponse}])
+// menjadi messages format OpenAI-compatible yang dipakai Groq.
+function convertContentsToGroqMessages(contents){
+  const messages = [{ role: 'system', content: SYSTEM_PROMPT }];
+  for (const turn of contents) {
+    if (turn.role === 'user') {
+      // Groq (Llama 3.1 8B) tidak mendukung input gambar — ambil teksnya saja.
+      const textParts = (turn.parts || []).filter(p => p.text).map(p => p.text);
+      messages.push({ role: 'user', content: textParts.join('\n') || '' });
+    } else if (turn.role === 'model') {
+      const textParts = (turn.parts || []).filter(p => p.text).map(p => p.text);
+      const callParts = (turn.parts || []).filter(p => p.functionCall);
+      const msg = { role: 'assistant', content: textParts.join('\n') || null };
+      if (callParts.length) {
+        msg.tool_calls = callParts.map((p, i) => ({
+          id: p.functionCall._groqId || `call_${Date.now()}_${i}`,
+          type: 'function',
+          function: { name: p.functionCall.name, arguments: JSON.stringify(p.functionCall.args || {}) }
+        }));
+      }
+      messages.push(msg);
+    } else if (turn.role === 'function') {
+      // Setiap functionResponse jadi satu message role "tool" terpisah (format OpenAI/Groq).
+      for (const p of (turn.parts || [])) {
+        if (!p.functionResponse) continue;
+        messages.push({
+          role: 'tool',
+          tool_call_id: p.functionResponse._groqId || 'call_unknown',
+          name: p.functionResponse.name,
+          content: JSON.stringify(p.functionResponse.response?.result ?? '')
+        });
+      }
+    }
+  }
+  return messages;
+}
+
+// Konversi daftar function_declarations format Gemini ke format tools OpenAI/Groq.
+function convertToolsToGroqFormat(geminiTools){
+  const decls = geminiTools?.[0]?.function_declarations || [];
+  return decls.map(d => ({
+    type: 'function',
+    function: { name: d.name, description: d.description, parameters: d.parameters }
+  }));
+}
+
+// Satu kali request stream ke Groq (format OpenAI-compatible, SSE). Mengembalikan { fullText, functionCalls }.
+// functionCalls di sini memakai bentuk yang sama dengan jalur Gemini ({ name, args, thoughtSignature })
+// supaya askAstraStream tidak perlu tahu provider mana yang sedang dipakai.
+async function streamOneTurnGroq(contents, onChunk){
+  const apiKey = getGroqKey();
+  if (!apiKey) {
+    const err = new Error('Belum ada API key Groq. Buka menu "API Key" di sidebar dan masukkan key Groq kamu dulu.');
+    err.noKey = true;
+    throw err;
+  }
+
+  const messages = convertContentsToGroqMessages(contents);
+  const tools = convertToolsToGroqFormat(buildGeminiTools());
+
+  const body = {
+    model: 'llama-3.1-8b-instant',
+    messages,
+    temperature: 0.7,
+    max_tokens: 8192,
+    stream: true
+  };
+  if (tools.length) body.tools = tools;
+
+  let res;
+  try {
+    res = await fetch(GROQ_ENDPOINT, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`
+      },
+      body: JSON.stringify(body)
+    });
+  } catch (e) {
+    throw new Error('Gagal menghubungi Groq: ' + (e.message || 'network error'));
+  }
+
+  if (!res.ok) {
+    const errData = await res.json().catch(() => ({}));
+    throw new Error(errData?.error?.message || `HTTP ${res.status} dari Groq`);
+  }
+
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder('utf-8');
+  let buffer = '';
+  let fullText = '';
+  // Kumpulkan potongan tool_call per index (Groq mengirim argumen tool secara ter-chunk saat streaming).
+  const toolCallChunks = {}; // { [index]: { id, name, argsStr } }
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+
+    const lines = buffer.split('\n');
+    buffer = lines.pop();
+
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (!trimmed.startsWith('data:')) continue;
+      const jsonStr = trimmed.slice(5).trim();
+      if (!jsonStr || jsonStr === '[DONE]') continue;
+      try {
+        const parsed = JSON.parse(jsonStr);
+        const delta = parsed?.choices?.[0]?.delta;
+        if (!delta) continue;
+        if (delta.content) {
+          fullText += delta.content;
+          onChunk(fullText);
+        }
+        if (delta.tool_calls) {
+          for (const tc of delta.tool_calls) {
+            const idx = tc.index ?? 0;
+            if (!toolCallChunks[idx]) toolCallChunks[idx] = { id: '', name: '', argsStr: '' };
+            if (tc.id) toolCallChunks[idx].id = tc.id;
+            if (tc.function?.name) toolCallChunks[idx].name += tc.function.name;
+            if (tc.function?.arguments) toolCallChunks[idx].argsStr += tc.function.arguments;
+          }
+        }
+      } catch (e) {
+        // baris belum lengkap / bukan JSON valid, skip
+      }
+    }
+  }
+
+  const functionCalls = Object.values(toolCallChunks).map(tc => {
+    let args = {};
+    try { args = tc.argsStr ? JSON.parse(tc.argsStr) : {}; } catch (e) { args = {}; }
+    return { name: tc.name, args, _groqId: tc.id };
+  });
+
+  return { fullText, functionCalls };
+}
+
+// Router: pilih jalur request sesuai provider dari model yang sedang dipilih.
+// Ini satu-satunya titik yang menentukan Gemini vs Groq — askAstraStream tidak perlu tahu bedanya.
+async function streamOneTurn(contents, onChunk){
+  const provider = getModelProvider(getSelectedModel());
+  if (provider === 'groq') {
+    return await streamOneTurnGroq(contents, onChunk);
+  }
+  return await streamOneTurnGemini(contents, onChunk);
+}
+
 // Panggil Gemini dengan tool bawaan Google Search untuk benar-benar mencari di web,
 // lalu kembalikan ringkasan hasil + sumbernya sebagai teks untuk dipakai Astra sebagai jawaban akhir.
-// Ini adalah provider DEFAULT (dipakai kalau Serper API key belum diisi).
+// Ini adalah provider DEFAULT (dipakai kalau Serper API key belum diisi). Hanya dipakai saat provider aktif = gemini.
 async function performWebSearchGemini(query, todayStr){
   const apiKey = getGeminiKey();
   if (!apiKey) {
@@ -2294,13 +2531,21 @@ Kamu diberi akses Google Search untuk mencari informasi TERKINI yang mungkin ter
 }
 
 // Panggil Serper.dev untuk mendapat hasil pencarian mentah (banyak link/sumber sekaligus),
-// lalu minta Gemini meringkas hasil-hasil tersebut jadi jawaban natural, sambil tetap
-// mencantumkan semua sumber yang dipakai. Dipakai HANYA kalau user sudah mengisi Serper API key.
+// lalu minta model (Gemini atau Groq, tergantung provider yang aktif) meringkas hasil-hasil
+// tersebut jadi jawaban natural, sambil tetap mencantumkan semua sumber yang dipakai.
+// Dipakai HANYA kalau user sudah mengisi Serper API key.
 async function performWebSearchSerper(query, todayStr){
   const serperKey = getSerperKey();
+  const provider = getModelProvider(getSelectedModel());
   const geminiKey = getGeminiKey();
-  if (!geminiKey) {
+  const groqKey = getGroqKey();
+
+  // Perlu minimal satu key (Gemini ATAU Groq) untuk meringkas hasil mentah Serper.
+  if (provider === 'gemini' && !geminiKey) {
     return JSON.stringify({ error: 'Tidak ada API key Gemini.' });
+  }
+  if (provider === 'groq' && !groqKey) {
+    return JSON.stringify({ error: 'Tidak ada API key Groq.' });
   }
 
   // 1) Ambil hasil mentah dari Serper (Google Search API pihak ketiga, hasil organik lebih banyak)
@@ -2340,7 +2585,7 @@ async function performWebSearchSerper(query, todayStr){
     return JSON.stringify({ summary: 'Tidak ditemukan hasil relevan.', sources: [], sourceCount: 0, provider: 'serper' });
   }
 
-  // 2) Minta Gemini meringkas hasil mentah tsb jadi jawaban natural yang tetap menyebut sumbernya
+  // 2) Minta model meringkas hasil mentah tsb jadi jawaban natural yang tetap menyebut sumbernya
   const summarizeInstruction = `Hari ini adalah ${todayStr}. Anggap ini fakta mutlak. Kamu diberi hasil pencarian Google (via Serper) mentah di bawah untuk query: "${query}".
 
 Aturan wajib:
@@ -2352,27 +2597,57 @@ Aturan wajib:
 Hasil pencarian mentah (JSON):
 ${JSON.stringify({ answerBox, knowledgeGraph, organic })}`;
 
+  let text = '';
   try {
-    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${getSelectedModel()}:generateContent`;
-    const res = await fetch(endpoint, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-goog-api-key': geminiKey
-      },
-      body: JSON.stringify({
-        system_instruction: { parts: [{ text: summarizeInstruction }] },
-        contents: [{ role: 'user', parts: [{ text: query }] }],
-        generationConfig: { temperature: 0.3, maxOutputTokens: 4096 }
-      })
-    });
-    if (!res.ok) {
-      const errData = await res.json().catch(() => ({}));
-      return JSON.stringify({ error: errData?.error?.message || `HTTP ${res.status}` });
+    if (provider === 'groq') {
+      // Ringkas pakai Groq (Llama 3.1 8B Instant) — tidak butuh Gemini key sama sekali.
+      const res = await fetch(GROQ_ENDPOINT, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${groqKey}`
+        },
+        body: JSON.stringify({
+          model: 'llama-3.1-8b-instant',
+          messages: [
+            { role: 'system', content: summarizeInstruction },
+            { role: 'user', content: query }
+          ],
+          temperature: 0.3,
+          max_tokens: 2048,
+          stream: false
+        })
+      });
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        return JSON.stringify({ error: errData?.error?.message || `HTTP ${res.status} dari Groq` });
+      }
+      const data = await res.json();
+      text = (data?.choices?.[0]?.message?.content || '').trim();
+    } else {
+      // Ringkas pakai model Gemini flash yang stabil (fixed), TERLEPAS dari getSelectedModel(),
+      // supaya tetap benar walau model utama yang dipilih adalah Groq di ronde lain.
+      const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent`;
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-goog-api-key': geminiKey
+        },
+        body: JSON.stringify({
+          system_instruction: { parts: [{ text: summarizeInstruction }] },
+          contents: [{ role: 'user', parts: [{ text: query }] }],
+          generationConfig: { temperature: 0.3, maxOutputTokens: 4096 }
+        })
+      });
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        return JSON.stringify({ error: errData?.error?.message || `HTTP ${res.status}` });
+      }
+      const data = await res.json();
+      const candidate = data?.candidates?.[0];
+      text = (candidate?.content?.parts || []).map(p => p.text || '').join('').trim();
     }
-    const data = await res.json();
-    const candidate = data?.candidates?.[0];
-    const text = (candidate?.content?.parts || []).map(p => p.text || '').join('').trim();
 
     // Sumber langsung dari hasil mentah Serper (jauh lebih banyak daripada grounding Gemini)
     const seenLinks = new Set();
@@ -2419,7 +2694,9 @@ async function askAstraStream(history, onChunk, onStatus){
   // onStatus(name|null): dipanggil dengan nama tool saat mulai dieksekusi, dan null saat selesai/tidak ada tool.
   // Return: { text, searchGroups } — searchGroups adalah daftar hasil web_search (query + sources + posisi teks)
   // dipakai untuk merender chip link sumber tepat setelah bagian jawaban yang relevan (mirip ChatGPT).
-  const contents = history.map(m => {
+  const MAX_HISTORY_MESSAGES = 7; // batasi jumlah pesan lama yang dikirim ulang ke API
+  const trimmedHistory = history.slice(-MAX_HISTORY_MESSAGES);
+  const contents = trimmedHistory.map(m => {
     const parts = [];
     if (m.images && m.images.length) {
       m.images.forEach(dataUrl => {
@@ -2455,9 +2732,10 @@ async function askAstraStream(history, onChunk, onStatus){
     contents.push({
       role: 'model',
       parts: functionCalls.map(fc => {
-        const { thoughtSignature, ...callOnly } = fc;
+        const { thoughtSignature, _groqId, ...callOnly } = fc;
         const part = { functionCall: callOnly };
         if (thoughtSignature) part.thoughtSignature = thoughtSignature;
+        if (_groqId) part.functionCall._groqId = _groqId; // dipakai jalur Groq untuk memetakan tool_call_id
         return part;
       })
     });
@@ -2473,7 +2751,8 @@ async function askAstraStream(history, onChunk, onStatus){
       functionResponseParts.push({
         functionResponse: {
           name: fc.name,
-          response: { result }
+          response: { result },
+          _groqId: fc._groqId // dipakai jalur Groq untuk memetakan tool_call_id ke message role "tool"
         }
       });
       // Catat sumber tiap panggilan web_search, beserta posisi (panjang teks sejauh ini)
