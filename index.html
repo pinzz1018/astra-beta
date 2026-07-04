@@ -1388,6 +1388,7 @@ ATURAN WAJIB soal gaya penutup jawaban coding — perhatikan baik-baik kata yang
 Kamu punya tool yang bisa dipanggil:
 1. "search_docs" — untuk mencari catatan best practice/panduan teknis internal sebelum menjawab pertanyaan coding. Lihat ATURAN WAJIB di bawah soal kapan tool ini harus dipanggil (tidak opsional untuk permintaan membuat kode/file).
 2. "run_code" — untuk menjalankan/menguji kode JavaScript secara nyata sebelum kamu sajikan ke pengguna, supaya kode yang kamu berikan benar-benar valid dan tidak error. Panggil ini ketika kamu menulis kode JavaScript yang cukup rumit (logika, fungsi, algoritma) dan ingin memastikan hasilnya benar sebelum menjawab. Jangan panggil untuk kode HTML/CSS murni atau bahasa selain JavaScript (karena run_code hanya mendukung JavaScript).
+3. "edit_code" — ATURAN WAJIB: kalau di pesan pengguna kamu melihat blok "[KODE AKTIF SAAT INI DI PANEL ARTEFAK PENGGUNA ...]", artinya sudah ada file yang sebelumnya berhasil dibuat dan sedang aktif. Kalau permintaan pengguna sekarang adalah REVISI/TAMBAHAN/PERBAIKAN terhadap file itu (misal "tambahin fitur X", "ubah warna Y", "perbaiki bug Z", "hapus bagian ini", "gedein tombolnya", dsb) — kamu WAJIB memanggil tool "edit_code" untuk mengubah HANYA bagian yang relevan, JANGAN menulis ulang seluruh file lewat code block. Setiap edit berisi old_str (potongan kode PERSIS apa adanya dari kode aktif tadi, harus unik) dan new_str (penggantinya). Kamu boleh kirim beberapa edit sekaligus dalam satu panggilan. Kalau tool mengembalikan error (old_str tidak ketemu/ambigu), baca pesan errornya, perbaiki old_str (biasanya perlu konteks baris lebih banyak/lebih spesifik) lalu panggil ulang — JANGAN menyerah dan menulis ulang seluruh file hanya karena satu edit gagal di percobaan pertama. Tulis ulang SELURUH file lewat code block HANYA kalau pengguna memang minta dibuatkan project/file BARU dari nol, atau kalau perubahan yang diminta memang menyangkut sebagian besar struktur file (bukan sekadar revisi kecil).
 3. "web_search" (kalau tersedia) — untuk mencari informasi terkini/faktual di internet. HANYA panggil ini kalau pesan pengguna memang cocok untuk dicari di web: berita terbaru, harga/kurs, jadwal, statistik yang berubah-ubah, fakta terkini, atau apapun yang kamu tidak tahu pasti/berada di luar pengetahuanmu. Kamu sendiri yang menentukan kapan pertanyaan pengguna butuh pencarian web — jangan panggil untuk obrolan biasa, sapaan, opini, atau pertanyaan yang sudah bisa kamu jawab sendiri dengan yakin tanpa perlu data terbaru. Tool ini mungkin tidak selalu tersedia (tergantung pengaturan pengguna); kalau kamu tidak melihat tool ini di daftar tools, jangan mencoba memanggilnya, cukup jawab dengan pengetahuanmu sendiri.
 4. "animate_image" — untuk mengubah foto/gambar yang BARU SAJA diunggah pengguna di percakapan ini menjadi video pendek dengan efek Ken Burns (zoom & pan sinematik halus). Panggil ini HANYA ketika pengguna secara eksplisit minta gambarnya dianimasikan/dijadikan video/digerakkan/dibikin hidup (contoh: "animasikan foto ini", "jadiin video dong gambarnya", "bikin gambar ini bergerak"). Tool ini otomatis memakai gambar terakhir yang diunggah pengguna di percakapan — kalau belum ada gambar yang diunggah sama sekali di percakapan ini, JANGAN panggil tool ini, cukup beri tahu pengguna untuk mengunggah foto dulu lewat tombol lampiran. Setelah tool ini selesai dan berhasil, cukup beri respons singkat yang ramah (video hasilnya akan otomatis ditampilkan oleh aplikasi, jadi jangan menjelaskan ulang secara teknis atau berlebihan).
 5. "replace_background" — untuk mengganti atau menghapus BACKGROUND foto yang BARU SAJA diunggah pengguna (khusus urusan latar belakang saja, bukan mengedit subjek/orangnya). Panggil ini untuk permintaan seperti: "hapus background", "ganti background jadi pantai/Jepang/hitam/putih/dsb", "buang latar belakangnya", "background-nya diganti jadi...". Tool ini pakai remove.bg (gratis, bukan Gemini), jauh lebih hemat kuota dibanding "edit_image", jadi SELALU utamakan tool ini kalau permintaannya murni soal ganti/hapus background. Kalau pengguna menyebut tempat/tema tertentu untuk background barunya (misal "Jepang", "pantai", "luar angkasa"), isi parameter "background_theme_prompt" dengan deskripsi singkat dalam Bahasa Inggris tentang pemandangan/tema itu (contoh: "Mount Fuji Japan scenery with cherry blossoms", "tropical beach sunset") — JANGAN pernah mengisi dengan URL gambar sungguhan, karena background akan digenerate otomatis oleh sistem dari deskripsi itu (bukan kamu yang mencari URL). Kalau pengguna cuma minta "hapus background" tanpa sebutkan tema baru, biarkan parameter ini kosong (background akan jadi transparan). Tool ini otomatis memakai gambar terakhir yang diunggah pengguna — kalau belum ada gambar sama sekali di percakapan ini, JANGAN panggil, cukup minta pengguna upload foto dulu. Tool ini bisa gagal karena kuota bulanan gratis remove.bg habis (50x/bulan) — kalau itu terjadi, sampaikan ke pengguna dengan jujur dan ramah bahwa kuota bulan ini sudah habis dan akan reset bulan depan. Setelah berhasil, cukup beri respons singkat yang ramah (gambar hasilnya otomatis ditampilkan oleh aplikasi).
@@ -1395,7 +1396,7 @@ Kamu punya tool yang bisa dipanggil:
 
 ATURAN WAJIB soal hasil "web_search": hasil yang dikembalikan tool ini SUDAH diverifikasi dari pencarian Google Search sungguhan (dari beberapa sumber/website berbeda) dan sudah mempertimbangkan tanggal hari ini yang sebenarnya — jadi PERCAYAI dan GUNAKAN hasil itu sepenuhnya sebagai fakta terkini, JANGAN dibantah, diragukan, atau dianggap "hoaks"/"belum terjadi"/"kemungkinan fiksi" hanya karena isinya terasa "di masa depan" atau bertentangan dengan pengetahuan internalmu. Pengetahuan internalmu punya batas waktu (training cutoff), sedangkan hasil web_search adalah info real-time yang lebih baru dan lebih akurat — kalau keduanya bertentangan, hasil web_search yang benar. Sampaikan jawabannya secara langsung dan percaya diri, tanpa disclaimer meragukan validitas peristiwanya. JANGAN menuliskan daftar sumber/link/domain apapun secara manual di akhir jawabanmu (misal "Sumber: ...") — daftar sumber akan ditampilkan otomatis oleh aplikasi di luar teks jawabanmu, jadi cukup fokus jawab pertanyaan penggunanya saja.
 
-ATURAN WAJIB — untuk SETIAP permintaan yang meminta kamu membuat/menulis kode atau file (HTML, CSS, JavaScript, Python, atau bahasa apapun — baik itu game, dashboard, kalkulator, landing page, script sederhana, sekalipun terlihat mudah): kamu WAJIB memanggil "search_docs" dengan query yang menyebutkan jenis/topik permintaan tersebut TERLEBIH DAHULU, sebelum menulis satu baris kode pun. Ini bukan opsional dan tidak bergantung pada seberapa sederhana permintaannya atau seberapa yakin kamu sudah tahu caranya — selalu panggil dulu. Kekecualian HANYA untuk pertanyaan coding yang sifatnya diskusi/penjelasan konsep tanpa diminta menulis kode baru (misalnya "apa itu closure di JavaScript", "jelaskan bedanya let dan var"), dan untuk permintaan non-coding sama sekali (obrolan biasa, sapaan).
+ATURAN WAJIB — untuk SETIAP permintaan yang meminta kamu membuat/menulis kode atau file BARU dari nol (HTML, CSS, JavaScript, Python, atau bahasa apapun — baik itu game, dashboard, kalkulator, landing page, script sederhana, sekalipun terlihat mudah): kamu WAJIB memanggil "search_docs" dengan query yang menyebutkan jenis/topik permintaan tersebut TERLEBIH DAHULU, sebelum menulis satu baris kode pun. Ini bukan opsional dan tidak bergantung pada seberapa sederhana permintaannya atau seberapa yakin kamu sudah tahu caranya — selalu panggil dulu. Kekecualian: (1) pertanyaan coding yang sifatnya diskusi/penjelasan konsep tanpa diminta menulis kode baru (misalnya "apa itu closure di JavaScript", "jelaskan bedanya let dan var"); (2) permintaan non-coding sama sekali (obrolan biasa, sapaan); (3) permintaan REVISI/EDIT kecil terhadap kode yang SUDAH ADA (lihat aturan "edit_code" di atas) — untuk kasus ini kamu BOLEH langsung memanggil "edit_code" tanpa "search_docs" dulu, kecuali revisinya cukup besar/menambah fitur baru yang cukup kompleks sehingga kamu sendiri merasa perlu cek best practice-nya dulu.
 
 ATURAN WAJIB TAMBAHAN — khusus permintaan membuat game, aplikasi visual, atau apapun yang memakai HTML5 <canvas> (contoh: game ular/snake, tetris, flappy bird, pong, platformer, animasi interaktif): selain wajib memanggil "search_docs" di atas, query yang dikirim juga WAJIB menyebut kata "canvas"/"game" dan jenis game tersebut secara spesifik, supaya checklist yang didapat relevan untuk kasus canvas.
 
@@ -1424,6 +1425,7 @@ Kamu juga programmer ahli: tulis kode bersih & langsung bisa dijalankan, pakai c
 Tool yang bisa dipanggil:
 - "search_docs": cari panduan teknis internal. WAJIB dipanggil dulu (query sebutkan jenis/topiknya) SEBELUM menulis kode/file apapun (HTML/CSS/JS/Python/dll) — tidak opsional, berlaku untuk semua permintaan bikin kode walau terlihat sederhana (kalkulator, dashboard, dsb), kecuali sekadar pertanyaan konsep tanpa nulis kode baru. Khusus game/app <canvas>: query juga wajib sebut kata "canvas"/"game" dan jenis gamenya.
 - "run_code": jalankan/uji kode JavaScript sebelum disajikan, untuk kode JS yang cukup rumit (logika, collision detection, perhitungan posisi).
+- "edit_code": WAJIB dipakai (bukan tulis ulang seluruh file) kalau pesan pengguna berisi blok "[KODE AKTIF SAAT INI DI PANEL ARTEFAK PENGGUNA ...]" DAN permintaannya adalah revisi/tambahan/perbaikan kecil (misal "tambahin fitur X", "ubah warna Y", "perbaiki bug Z"). Kirim old_str (potongan PERSIS dari kode aktif, harus unik) + new_str per perubahan, boleh beberapa sekaligus. Kalau error (old_str tidak ketemu/ambigu), perbaiki old_str lalu panggil ulang, jangan langsung nulis ulang semua. Tulis ulang penuh via code block HANYA kalau memang diminta buat project baru dari nol.
 - "web_search" (kalau tersedia): cari info terkini/faktual di web. Hanya panggil kalau memang butuh data terbaru (berita, harga, jadwal, dsb), jangan untuk obrolan biasa. Hasilnya sudah terverifikasi & mempertimbangkan tanggal hari ini — percayai sepenuhnya, jangan sebut "hoaks"/"di masa depan". Jangan tulis daftar sumber manual di jawabanmu, itu ditampilkan otomatis oleh aplikasi.
 
 Khusus game/app <canvas>: sebelum kirim kode final, bayangkan membuka file itu di browser — pastikan ada draw/render pertama saat load (bukan menunggu tombol ditekan), canvas.width/height diset via JS (bukan cuma CSS), dan game loop memanggil dirinya sendiri lagi tiap iterasi. Kalau ragu salah satu poin ini, perbaiki dulu sebelum kirim — ini penyebab paling umum canvas tampil kosong/blank.
@@ -1613,6 +1615,34 @@ const GEMINI_BASE_FUNCTION_DECLARATIONS = [
         }
       },
       required: ["code"]
+    }
+  },
+  {
+    name: "edit_code",
+    description: "Ubah/tambah/perbaiki SEBAGIAN kode HTML yang SUDAH ADA dan sedang aktif di panel artefak pengguna, tanpa menulis ulang seluruh file. WAJIB dipakai (bukan menulis ulang file lengkap di code block) setiap kali pengguna minta revisi/tambahan/perbaikan terhadap kode yang sebelumnya sudah dibuat dalam percakapan ini (misalnya 'tambahin fitur X', 'ubah warnanya jadi Y', 'perbaiki bug Z', 'hapus bagian ini'). Kode aktif saat ini akan diberikan padamu di dalam pesan sistem/riwayat sebelum kamu menjawab. Setiap edit terdiri dari 'old_str' (potongan kode PERSIS seperti apa adanya di file saat ini, harus unik dan hanya cocok di SATU tempat — sertakan cukup konteks baris di sekitarnya kalau perlu supaya unik) dan 'new_str' (kode pengganti). Kamu bisa mengirim beberapa edit sekaligus dalam satu panggilan kalau perubahannya di beberapa bagian berbeda. Kalau salah satu old_str tidak ditemukan atau ditemukan di lebih dari satu tempat, tool akan mengembalikan pesan error yang menyebutkan edit ke berapa yang gagal — perbaiki old_str itu (biasanya persempit/perpanjang potongannya) lalu panggil ulang. JANGAN gunakan tool ini untuk membuat file/project BARU dari nol (pakai code block biasa untuk itu).",
+    parameters: {
+      type: "object",
+      properties: {
+        edits: {
+          type: "array",
+          description: "Daftar perubahan yang ingin diterapkan ke kode aktif.",
+          items: {
+            type: "object",
+            properties: {
+              old_str: {
+                type: "string",
+                description: "Potongan kode PERSIS (termasuk spasi/indentasi) yang ingin diganti, harus unik di file saat ini."
+              },
+              new_str: {
+                type: "string",
+                description: "Kode pengganti untuk old_str. Bisa string kosong kalau tujuannya menghapus old_str."
+              }
+            },
+            required: ["old_str", "new_str"]
+          }
+        }
+      },
+      required: ["edits"]
     }
   },
   {
@@ -1878,6 +1908,110 @@ function artifactMarkFinished(finalCode){
   if (artifactPreviewRefreshTimer) clearTimeout(artifactPreviewRefreshTimer);
   artifactFrame.srcdoc = finalCode;
   setArtifactTab('preview'); // begitu selesai, otomatis pindah ke Preview biar user lihat hasilnya
+}
+
+// Dorong hasil edit_code (bukan tulisan baru dari nol) ke panel artefak yang sudah ada,
+// lalu langsung refresh preview-nya. Dipakai setelah applyCodeEdits() berhasil.
+function artifactPushEditedCode(newCode){
+  lastRunCode = newCode;
+  artifactCodeContent.textContent = newCode;
+  if (artifactPreviewRefreshTimer) clearTimeout(artifactPreviewRefreshTimer);
+  artifactFrame.srcdoc = newCode;
+  setArtifactTab('preview');
+}
+
+// Ratakan whitespace untuk fallback pencarian yang lebih toleran (kalau exact match gagal
+// karena beda indentasi/line ending saja, BUKAN karena AI salah menebak lokasi kode).
+function normalizeWhitespaceForMatch(str){
+  return str.replace(/[ \t]+/g, ' ').replace(/\s*\n\s*/g, '\n').trim();
+}
+
+// Cari SATU kemunculan old_str di source secara case-sensitive & exact.
+// Return { count, index } — index hanya valid kalau count === 1.
+function findExactOccurrences(source, needle){
+  if (!needle) return { count: 0, index: -1 };
+  let count = 0, idx = -1, fromIndex = 0;
+  while (true) {
+    const found = source.indexOf(needle, fromIndex);
+    if (found === -1) break;
+    count++;
+    if (count === 1) idx = found;
+    fromIndex = found + needle.length;
+  }
+  return { count, index: idx };
+}
+
+// Terapkan satu edit { old_str, new_str } ke kode aktif (lastRunCode).
+// Strategi: (1) exact match, harus persis 1 kemunculan; (2) kalau gagal, coba dengan
+// whitespace dinormalisasi di KEDUA sisi (source & needle) lalu petakan balik ke posisi asli
+// dengan mencari ulang exact di source asli menggunakan potongan yang berhasil dikenali;
+// (3) kalau tetap gagal/ambigu, kembalikan error deskriptif supaya AI bisa retry dengan
+// old_str yang lebih spesifik — TIDAK auto-fallback ke tulis ulang seluruh file.
+function applyOneCodeEdit(source, old_str, new_str){
+  if (typeof old_str !== 'string' || old_str === '') {
+    return { ok: false, error: 'old_str kosong/tidak valid.' };
+  }
+  const exact = findExactOccurrences(source, old_str);
+  if (exact.count === 1) {
+    return {
+      ok: true,
+      result: source.slice(0, exact.index) + new_str + source.slice(exact.index + old_str.length)
+    };
+  }
+  if (exact.count > 1) {
+    return { ok: false, error: `old_str ditemukan di ${exact.count} tempat berbeda (harus unik). Perpanjang old_str dengan lebih banyak konteks baris di sekitarnya supaya hanya cocok di satu tempat.` };
+  }
+
+  // Fallback: normalized-whitespace match. Cari posisi di source ASLI dengan menormalisasi
+  // kedua sisi, lalu kalau ketemu tepat 1 kandidat, ambil teks ASLI (belum dinormalisasi)
+  // pada rentang itu supaya penggantian tidak merusak formatting asli di luar area yang diedit.
+  const normalizedNeedle = normalizeWhitespaceForMatch(old_str);
+  const lines = source.split('\n');
+  // Coba geser jendela baris (window) sepanjang jumlah baris old_str, cari yang match setelah dinormalisasi.
+  const needleLineCount = old_str.split('\n').length;
+  let candidateMatches = [];
+  for (let start = 0; start + needleLineCount <= lines.length; start++){
+    const windowText = lines.slice(start, start + needleLineCount).join('\n');
+    if (normalizeWhitespaceForMatch(windowText) === normalizedNeedle) {
+      candidateMatches.push(start);
+    }
+  }
+  if (candidateMatches.length === 1) {
+    const start = candidateMatches[0];
+    const before = lines.slice(0, start).join('\n') + (start > 0 ? '\n' : '');
+    const after = lines.slice(start + needleLineCount).join('\n');
+    const originalChunk = lines.slice(start, start + needleLineCount).join('\n');
+    return { ok: true, result: before + new_str + (after ? '\n' + after : '') , _matchedVia: 'whitespace-normalized', _originalChunk: originalChunk };
+  }
+  if (candidateMatches.length > 1) {
+    return { ok: false, error: `old_str tidak ditemukan persis, dan setelah whitespace diabaikan pun cocok di ${candidateMatches.length} tempat berbeda (ambigu). Perpanjang old_str dengan lebih banyak konteks.` };
+  }
+
+  return { ok: false, error: 'old_str tidak ditemukan sama sekali di kode saat ini. Pastikan menyalin potongan kode persis apa adanya dari kode aktif (perhatikan spasi/karakter), atau gunakan potongan yang lebih pendek dan spesifik.' };
+}
+
+// Terapkan SEMUA edit dari satu panggilan tool edit_code secara berurutan ke lastRunCode.
+// Kalau ada satu edit yang gagal, proses dihentikan (edit-edit sebelumnya di panggilan yang
+// SAMA tetap dibatalkan/tidak disimpan ke lastRunCode) dan error dikembalikan ke model
+// supaya ia bisa retry dengan old_str yang lebih tepat, tanpa merusak state kode yang aktif.
+function applyCodeEdits(edits){
+  if (!Array.isArray(edits) || !edits.length) {
+    return { ok: false, error: 'Parameter "edits" kosong atau tidak valid.' };
+  }
+  if (!lastRunCode) {
+    return { ok: false, error: 'Belum ada kode aktif di panel artefak untuk diedit. Kalau ini permintaan membuat file baru, jangan pakai edit_code — tulis kode lengkapnya lewat code block biasa.' };
+  }
+  let working = lastRunCode;
+  for (let i = 0; i < edits.length; i++){
+    const { old_str, new_str } = edits[i] || {};
+    const res = applyOneCodeEdit(working, old_str, typeof new_str === 'string' ? new_str : '');
+    if (!res.ok) {
+      return { ok: false, error: `Edit ke-${i + 1} dari ${edits.length} gagal: ${res.error}` };
+    }
+    working = res.result;
+  }
+  artifactPushEditedCode(working);
+  return { ok: true, newCode: working };
 }
 
 function closeArtifact(){
@@ -4245,6 +4379,10 @@ async function executeTool(name, args){
   if (name === 'run_code') {
     return runCodeSandboxed(args.code || '');
   }
+  if (name === 'edit_code') {
+    const res = applyCodeEdits(args.edits || []);
+    return JSON.stringify(res.ok ? { success: true, message: 'Edit berhasil diterapkan ke kode aktif.' } : { success: false, error: res.error });
+  }
   if (name === 'web_search') {
     return await performWebSearch(args.query || '');
   }
@@ -4281,6 +4419,23 @@ async function askAstraStream(history, onChunk, onStatus){
     if (!parts.length) parts.push({ text: '' });
     return { role: m.role, parts };
   });
+
+  // Kalau ada kode aktif di panel artefak (hasil pembuatan/edit sebelumnya), sisipkan sebagai
+  // catatan konteks pada pesan user PALING TERAKHIR, supaya AI tahu isi file saat ini persis
+  // dan bisa menyusun old_str yang akurat & unik kalau perlu memanggil edit_code. Disisipkan di
+  // sini (bukan dijadikan role terpisah) supaya otomatis ikut terkonversi rapi ke format
+  // Groq/OpenRouter tanpa perlu ubah konverternya masing-masing.
+  if (lastRunCode) {
+    let lastUserIdx = -1;
+    for (let i = contents.length - 1; i >= 0; i--){
+      if (contents[i].role === 'user') { lastUserIdx = i; break; }
+    }
+    if (lastUserIdx !== -1) {
+      contents[lastUserIdx].parts.push({
+        text: `\n\n[KODE AKTIF SAAT INI DI PANEL ARTEFAK PENGGUNA — gunakan ini sebagai referensi persis kalau ingin memanggil edit_code, JANGAN tulis ulang dari nol kalau permintaan pengguna hanya revisi/tambahan kecil]:\n\`\`\`html\n${lastRunCode}\n\`\`\``
+      });
+    }
+  }
 
   const MAX_TOOL_ROUNDS = 10;
   let combinedText = '';
@@ -4469,7 +4624,7 @@ async function handleSend(){
 
   renderTyping();
 
-  const wantsHtmlCode = isHtmlCodeRequest(text);
+  const wantsHtmlCode = isHtmlCodeRequest(text) || !!lastRunCode;
 
   try {
     let streamRow = null;
@@ -4478,6 +4633,7 @@ async function handleSend(){
     let artifactPanelOpened = false; // sudah pernah buka panel live untuk turn ini?
     let lastExtractedCode = '';      // kode HTML terakhir yang berhasil diekstrak dari teks parsial
     let sawSearchDocsCall = false;   // true HANYA kalau search_docs beneran dipanggil (bukan asumsi)
+    let sawEditCodeCall = false;     // true HANYA kalau edit_code beneran dipanggil & berhasil (bukan menulis baru)
 
     // Ambil isi code block ```html ... ``` (boleh belum tertutup, untuk kondisi masih streaming)
     // dari teks jawaban parsial, supaya bisa didorong live ke panel artefak.
@@ -4500,18 +4656,22 @@ async function handleSend(){
         .trim();
     }
 
-    if (wantsHtmlCode) {
-      removeTyping();
-      streamRow = renderMessage('model', '', [], true, false);
-      const bubble = streamRow.querySelector('.bubble');
-      typewriter = createTypewriter(bubble);
-      window.__astraCurrentAnimateContainer = streamRow.querySelector('.animate-slot') || null;
-      // Chip status muncul duluan di atas bubble jawaban, mewakili proses pembuatan filenya.
-      // Urutan chip: reading (search_docs) -> planning -> writing (mulai nulis code block)
-      // -> testing (run_code, kalau dipanggil) -> done. Dimulai dari "reading" karena
-      // search_docs WAJIB dipanggil duluan sebelum AI menulis kode apapun.
+    // Chip status TIDAK dibuat di sini lagi — supaya tidak muncul untuk pesan biasa yang ternyata
+    // tidak menyentuh kode sama sekali (ngobrol santai walau ada kode aktif dari sebelumnya).
+    // Chip baru benar-benar dibuat begitu ADA tool call/aksi nyata pertama yang terjadi
+    // (search_docs / edit_code / mulai menulis code block), lewat ensureArtifactChip() di bawah.
+    function ensureArtifactChip(initialStep){
+      if (artifactChip) return artifactChip;
+      if (!streamRow) {
+        removeTyping();
+        streamRow = renderMessage('model', '', [], true, false);
+        const bubble = streamRow.querySelector('.bubble');
+        typewriter = createTypewriter(bubble);
+        window.__astraCurrentAnimateContainer = streamRow.querySelector('.animate-slot') || null;
+      }
       artifactChip = createArtifactChip(streamRow.querySelector('.bubble-col'), 'index.html');
-      artifactChip.setStep('reading', false);
+      artifactChip.setStep(initialStep, false);
+      return artifactChip;
     }
 
     const { text: reply, searchGroups } = await askAstraStream(
@@ -4537,7 +4697,7 @@ async function handleSend(){
             if (!artifactPanelOpened) {
               artifactPanelOpened = true;
               openArtifactLive('index.html');
-              artifactChip.setStep('writing', false);
+              ensureArtifactChip('writing').setStep('writing', false);
             } else {
               artifactPushLiveCode(code);
             }
@@ -4563,10 +4723,12 @@ async function handleSend(){
         } else if (toolName === null && streamRow) {
           hideSearchIndicator(streamRow);
         }
-        // search_docs beneran dipanggil -> pastikan chip di step "reading".
-        if (toolName === 'search_docs' && artifactChip) {
+        // search_docs beneran dipanggil, DAN ini konteks permintaan kode -> baru buat chip (lazy),
+        // mulai di step "reading". Chip TIDAK dibuat untuk search_docs yang dipanggil di luar
+        // konteks kode (jarang terjadi, tapi jaga-jaga).
+        if (toolName === 'search_docs' && wantsHtmlCode) {
           sawSearchDocsCall = true;
-          artifactChip.setStep('reading', false);
+          ensureArtifactChip('reading');
         }
         // search_docs selesai (toolName balik ke null setelah sempat reading) -> lanjut ke "planning".
         if (toolName === null && artifactChip && sawSearchDocsCall && !artifactPanelOpened) {
@@ -4576,16 +4738,46 @@ async function handleSend(){
         if (toolName === 'run_code' && artifactChip) {
           artifactChip.setStep('testing', false);
         }
+        // edit_code MULAI dipanggil -> baru di titik INI panel & chip mode edit benar-benar dibuka
+        // (lazy, bukan di awal turn), supaya pesan biasa yang tidak menyentuh kode tidak pernah
+        // memunculkan chip/panel sama sekali. Kalau chip belum ada, buat langsung di step "writing".
+        if (toolName === 'edit_code') {
+          sawEditCodeCall = true;
+          ensureArtifactChip('writing').setStep('writing', false);
+          if (!artifactPanelOpened && lastRunCode) {
+            artifactPanelOpened = true;
+            artifactIsLive = true;
+            artifactStatusBadge.classList.add('active');
+            const dict = translations[getLang()] || translations.en;
+            artifactStatusText.textContent = dict['artifact-status-writing'];
+            artifactTitleText.textContent = dict['artifact-default-title'];
+            artifactCodeContent.textContent = lastRunCode;
+            artifactOverlay.classList.add('open');
+          }
+        }
       }
     );
     if (streamRow) hideSearchIndicator(streamRow);
 
     // Finalisasi artefak: dorong kode final ke panel (preview jadi live-render penuh) & tandai chip selesai.
     if (wantsHtmlCode && lastExtractedCode) {
+      // Kasus tulis baru dari nol (code block terdeteksi).
       if (artifactPanelOpened) {
         artifactMarkFinished(lastExtractedCode.trim());
       }
       if (artifactChip) artifactChip.finish();
+    } else if (wantsHtmlCode && sawEditCodeCall && artifactPanelOpened) {
+      // Kasus edit: lastRunCode sudah diupdate langsung oleh applyCodeEdits()/artifactPushEditedCode(),
+      // di sini cukup tandai panel selesai "live" & pindah ke tab preview, tanpa menimpa lastRunCode.
+      artifactIsLive = false;
+      artifactStatusBadge.classList.remove('active');
+      setArtifactTab('preview');
+      if (artifactChip) artifactChip.finish();
+    } else if (artifactChip) {
+      // Fallback: chip sempat dibuat (misal search_docs sudah terpanggil untuk konteks kode),
+      // tapi ternyata AI batal menulis kode baru maupun memanggil edit_code di turn ini (misal
+      // akhirnya cuma menjawab dengan teks). Tutup chip supaya tidak menggantung di step "reading".
+      artifactChip.finish();
     }
 
     // Sisipkan chip link sumber (kalau ada web_search) tepat setelah bagian jawaban yang terkait.
