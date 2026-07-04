@@ -736,6 +736,8 @@
   .apikey-card{
     background:var(--surface); border:1px solid var(--border); border-radius:16px;
     padding:22px; max-width:380px; width:100%;
+    max-height: calc(100vh - 40px); overflow-y:auto; box-sizing:border-box;
+    -webkit-overflow-scrolling: touch;
   }
   .apikey-title{ font-family:var(--font-display); font-weight:600; font-size:18px; margin:0 0 6px 0; }
   .apikey-desc{ color:var(--text-soft); font-size:13px; margin:0 0 16px 0; line-height:1.5; }
@@ -849,17 +851,17 @@
     <h2 class="apikey-title" style="margin-top:18px;" data-i18n="apikey-openrouter-title">OpenRouter API Key</h2>
     <p class="apikey-desc" data-i18n="apikey-openrouter-desc">Opsional: masukkan API key OpenRouter untuk memakai model Astra 2.0 (Qwen3 Coder) dan Astra 2.5 (NVIDIA Nemotron 3 Super) — keduanya gratis. Key disimpan hanya di perangkat ini.</p>
     <input id="apikey-openrouter-input" type="text" placeholder="sk-or-v1-..." class="apikey-input">
+    <h2 class="apikey-title" style="margin-top:18px;" data-i18n="apikey-removebg-title">remove.bg API Key</h2>
+    <p class="apikey-desc" data-i18n="apikey-removebg-desc">Opsional: masukkan API key remove.bg untuk memakai fitur ganti/hapus background foto (gratis 50 kali/bulan). Key disimpan hanya di perangkat ini.</p>
+    <input id="apikey-removebg-input" type="text" placeholder="Contoh: aBcDeFg..." class="apikey-input">
+    <p class="apikey-hint" data-i18n="apikey-hint">Belum punya key? Buat gratis di <span style="color:var(--accent);">aistudio.google.com/app/apikey</span></p>
+    <p class="apikey-hint" data-i18n="apikey-groq-hint">Groq key gratis di <span style="color:var(--accent);">console.groq.com/keys</span></p>
+    <p class="apikey-hint" data-i18n="apikey-openrouter-hint">OpenRouter key gratis di <span style="color:var(--accent);">openrouter.ai/keys</span></p>
+    <p class="apikey-hint" data-i18n="apikey-removebg-hint">remove.bg key gratis (50x/bulan) di <span style="color:var(--accent);">remove.bg/dashboard#api-key</span></p>
     <div style="display:flex;gap:8px;margin-top:16px;">
       <button id="apikey-cancel" class="apikey-btn-secondary" data-i18n="cancel">Batal</button>
       <button id="apikey-save" class="apikey-btn-primary" data-i18n="save">Simpan</button>
     </div>
-    <p class="apikey-hint" data-i18n="apikey-hint">Belum punya key? Buat gratis di <span style="color:var(--accent);">aistudio.google.com/app/apikey</span></p>
-    <p class="apikey-hint" data-i18n="apikey-groq-hint">Groq key gratis di <span style="color:var(--accent);">console.groq.com/keys</span></p>
-    <p class="apikey-hint" data-i18n="apikey-openrouter-hint">OpenRouter key gratis di <span style="color:var(--accent);">openrouter.ai/keys</span></p>
-    <h2 class="apikey-title" style="margin-top:18px;" data-i18n="apikey-removebg-title">remove.bg API Key</h2>
-    <p class="apikey-desc" data-i18n="apikey-removebg-desc">Opsional: masukkan API key remove.bg untuk memakai fitur ganti/hapus background foto (gratis 50 kali/bulan). Key disimpan hanya di perangkat ini.</p>
-    <input id="apikey-removebg-input" type="text" placeholder="Contoh: aBcDeFg..." class="apikey-input">
-    <p class="apikey-hint" data-i18n="apikey-removebg-hint">remove.bg key gratis (50x/bulan) di <span style="color:var(--accent);">remove.bg/dashboard#api-key</span></p>
   </div>
 </div>
 
