@@ -3525,7 +3525,7 @@ async function streamOneTurnOpenRouter(contents, onChunk){
     model: getSelectedModel(),
     messages,
     temperature: 0.7,
-    max_tokens: isGptOss120b ? 15000 : 4096,
+    max_tokens: isGptOss120b ? 8000 : 4096,
     stream: true
   };
   if (tools.length) body.tools = tools;
@@ -3552,7 +3552,9 @@ async function streamOneTurnOpenRouter(contents, onChunk){
 
   if (!res.ok) {
     const errData = await res.json().catch(() => ({}));
-    throw new Error(errData?.error?.message || `HTTP ${res.status} dari OpenRouter`);
+    console.error('[OpenRouter error]', { status: res.status, model: getSelectedModel(), body, errData });
+    const providerMsg = errData?.error?.metadata?.raw || errData?.error?.message;
+    throw new Error(providerMsg || `HTTP ${res.status} dari OpenRouter`);
   }
 
   const reader = res.body.getReader();
