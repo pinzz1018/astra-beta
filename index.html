@@ -330,6 +330,47 @@
   }
   .editimg-dl:hover{ background: var(--accent-soft); }
 
+  /* ---------- Kotak progress ganti background (remove.bg) — thumbnail gambar user + shimmer sweep + persen di tengah ---------- */
+  .bgedit-progress-card{
+    position: relative; max-width: 320px; border-radius: 16px; overflow:hidden;
+    border:1px solid var(--border); background:#000; margin-bottom:8px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.12);
+  }
+  .bgedit-progress-card img{
+    width:100%; display:block; max-height: 420px; object-fit:contain;
+    filter: brightness(0.55) blur(0.5px);
+  }
+  .bgedit-progress-card .bgedit-shimmer-sweep{
+    position:absolute; inset:0; pointer-events:none;
+    background: linear-gradient(
+      100deg,
+      rgba(255,255,255,0) 30%,
+      rgba(255,255,255,0.35) 48%,
+      rgba(255,255,255,0.35) 52%,
+      rgba(255,255,255,0) 70%
+    );
+    background-size: 250% 100%;
+    animation: bgedit-sweep-move 1.7s linear infinite;
+  }
+  @keyframes bgedit-sweep-move{
+    0%{ background-position: 200% 0; }
+    100%{ background-position: -200% 0; }
+  }
+  .bgedit-progress-card .bgedit-progress-center{
+    position:absolute; inset:0; display:flex; flex-direction:column;
+    align-items:center; justify-content:center; gap:6px; pointer-events:none;
+  }
+  .bgedit-progress-card .bgedit-progress-pct{
+    font-size: 26px; font-weight:700; color:#fff;
+    text-shadow: 0 1px 6px rgba(0,0,0,0.6);
+    font-family: var(--font-body);
+  }
+  .bgedit-progress-card .bgedit-progress-label{
+    font-size: 12.5px; color: rgba(255,255,255,0.85);
+    text-shadow: 0 1px 4px rgba(0,0,0,0.6);
+    font-family: var(--font-body);
+  }
+
   .typing{ display:flex; gap:4px; padding: 6px 0; }
   .typing span{
     width:6px;height:6px;border-radius:50%; background: var(--text-soft);
@@ -815,6 +856,10 @@
     <p class="apikey-hint" data-i18n="apikey-hint">Belum punya key? Buat gratis di <span style="color:var(--accent);">aistudio.google.com/app/apikey</span></p>
     <p class="apikey-hint" data-i18n="apikey-groq-hint">Groq key gratis di <span style="color:var(--accent);">console.groq.com/keys</span></p>
     <p class="apikey-hint" data-i18n="apikey-openrouter-hint">OpenRouter key gratis di <span style="color:var(--accent);">openrouter.ai/keys</span></p>
+    <h2 class="apikey-title" style="margin-top:18px;" data-i18n="apikey-removebg-title">remove.bg API Key</h2>
+    <p class="apikey-desc" data-i18n="apikey-removebg-desc">Opsional: masukkan API key remove.bg untuk memakai fitur ganti/hapus background foto (gratis 50 kali/bulan). Key disimpan hanya di perangkat ini.</p>
+    <input id="apikey-removebg-input" type="text" placeholder="Contoh: aBcDeFg..." class="apikey-input">
+    <p class="apikey-hint" data-i18n="apikey-removebg-hint">remove.bg key gratis (50x/bulan) di <span style="color:var(--accent);">remove.bg/dashboard#api-key</span></p>
   </div>
 </div>
 
@@ -1035,6 +1080,10 @@ function setGroqKey(key){ localStorage.setItem('astra-groq-key', key.trim()); }
 function getOpenRouterKey(){ return localStorage.getItem('astra-openrouter-key') || ''; }
 function setOpenRouterKey(key){ localStorage.setItem('astra-openrouter-key', key.trim()); }
 
+// --- remove.bg API key (gratis, 50 panggilan/bulan): dipakai khusus untuk ganti/hapus background foto ---
+function getRemoveBgKey(){ return localStorage.getItem('astra-removebg-key') || ''; }
+function setRemoveBgKey(key){ localStorage.setItem('astra-removebg-key', key.trim()); }
+
 // --- Toggle pencarian web: kalau mati, tool web_search tidak pernah didaftarkan ke Gemini ---
 function isWebSearchEnabled(){ return localStorage.getItem('astra-websearch') !== 'off'; }
 function setWebSearchEnabled(enabled){ localStorage.setItem('astra-websearch', enabled ? 'on' : 'off'); }
@@ -1120,7 +1169,8 @@ Kamu punya tool yang bisa dipanggil:
 2. "run_code" — untuk menjalankan/menguji kode JavaScript secara nyata sebelum kamu sajikan ke pengguna, supaya kode yang kamu berikan benar-benar valid dan tidak error. Panggil ini ketika kamu menulis kode JavaScript yang cukup rumit (logika, fungsi, algoritma) dan ingin memastikan hasilnya benar sebelum menjawab. Jangan panggil untuk kode HTML/CSS murni atau bahasa selain JavaScript (karena run_code hanya mendukung JavaScript).
 3. "web_search" (kalau tersedia) — untuk mencari informasi terkini/faktual di internet. HANYA panggil ini kalau pesan pengguna memang cocok untuk dicari di web: berita terbaru, harga/kurs, jadwal, statistik yang berubah-ubah, fakta terkini, atau apapun yang kamu tidak tahu pasti/berada di luar pengetahuanmu. Kamu sendiri yang menentukan kapan pertanyaan pengguna butuh pencarian web — jangan panggil untuk obrolan biasa, sapaan, opini, atau pertanyaan yang sudah bisa kamu jawab sendiri dengan yakin tanpa perlu data terbaru. Tool ini mungkin tidak selalu tersedia (tergantung pengaturan pengguna); kalau kamu tidak melihat tool ini di daftar tools, jangan mencoba memanggilnya, cukup jawab dengan pengetahuanmu sendiri.
 4. "animate_image" — untuk mengubah foto/gambar yang BARU SAJA diunggah pengguna di percakapan ini menjadi video pendek dengan efek Ken Burns (zoom & pan sinematik halus). Panggil ini HANYA ketika pengguna secara eksplisit minta gambarnya dianimasikan/dijadikan video/digerakkan/dibikin hidup (contoh: "animasikan foto ini", "jadiin video dong gambarnya", "bikin gambar ini bergerak"). Tool ini otomatis memakai gambar terakhir yang diunggah pengguna di percakapan — kalau belum ada gambar yang diunggah sama sekali di percakapan ini, JANGAN panggil tool ini, cukup beri tahu pengguna untuk mengunggah foto dulu lewat tombol lampiran. Setelah tool ini selesai dan berhasil, cukup beri respons singkat yang ramah (video hasilnya akan otomatis ditampilkan oleh aplikasi, jadi jangan menjelaskan ulang secara teknis atau berlebihan).
-5. "edit_image" — untuk mengedit ISI/KONTEN foto yang BARU SAJA diunggah pengguna memakai instruksi bahasa natural (AI image editing sungguhan: hapus/ganti background, hapus objek/orang, ubah warna baju, ubah jadi gaya tertentu, colorize foto hitam-putih, dsb). Panggil ini ketika pengguna minta mengubah isi gambarnya dengan kalimat perintah (contoh: "hapus background", "ganti jadi pantai", "hilangkan orang di belakang", "ubah jadi anime"). Tulis parameter "instruction" dalam Bahasa Inggris yang jelas dan spesifik berdasarkan permintaan pengguna, supaya hasil editnya lebih akurat. JANGAN panggil untuk permintaan animasi/video (itu tugas "animate_image"). Tool ini otomatis memakai gambar terakhir yang diunggah pengguna — kalau belum ada gambar sama sekali di percakapan ini, JANGAN panggil, cukup minta pengguna upload foto dulu. Tool ini bisa gagal karena kuota/limit harian model edit gambar habis — kalau itu terjadi, sampaikan ke pengguna dengan jujur dan ramah bahwa kuota edit gambar sedang habis dan bisa dicoba lagi nanti/besok, jangan berpura-pura berhasil. Setelah berhasil, cukup beri respons singkat yang ramah (gambar hasilnya otomatis ditampilkan oleh aplikasi).
+5. "replace_background" — untuk mengganti atau menghapus BACKGROUND foto yang BARU SAJA diunggah pengguna (khusus urusan latar belakang saja, bukan mengedit subjek/orangnya). Panggil ini untuk permintaan seperti: "hapus background", "ganti background jadi pantai/Jepang/hitam/putih/dsb", "buang latar belakangnya", "background-nya diganti jadi...". Tool ini pakai remove.bg (gratis, bukan Gemini), jauh lebih hemat kuota dibanding "edit_image", jadi SELALU utamakan tool ini kalau permintaannya murni soal ganti/hapus background. Kalau pengguna menyebut tempat/tema tertentu untuk background barunya (misal "Jepang", "pantai", "luar angkasa"), isi parameter "background_image_url" dengan URL gambar yang relevan dan cocok (kamu boleh pakai URL gambar hasil pengetahuanmu atau biarkan kosong kalau tidak yakin ada URL yang valid — kalau dikosongkan, background akan dihapus jadi transparan saja tanpa diganti). Tool ini otomatis memakai gambar terakhir yang diunggah pengguna — kalau belum ada gambar sama sekali di percakapan ini, JANGAN panggil, cukup minta pengguna upload foto dulu. Tool ini bisa gagal karena kuota bulanan gratis remove.bg habis (50x/bulan) — kalau itu terjadi, sampaikan ke pengguna dengan jujur dan ramah bahwa kuota bulan ini sudah habis dan akan reset bulan depan. Setelah berhasil, cukup beri respons singkat yang ramah (gambar hasilnya otomatis ditampilkan oleh aplikasi).
+6. "edit_image" — untuk mengedit ISI/KONTEN foto yang BARU SAJA diunggah pengguna memakai instruksi bahasa natural, SELAIN urusan background (hapus objek/orang, ubah warna baju, ubah jadi gaya tertentu, colorize foto hitam-putih, dsb). JANGAN pakai tool ini untuk permintaan ganti/hapus background — untuk itu pakai "replace_background" karena lebih hemat kuota. Panggil "edit_image" ketika pengguna minta mengubah isi gambarnya dengan kalimat perintah selain background (contoh: "hilangkan orang di belakang", "ubah jadi anime", "ganti warna baju jadi merah"). Tulis parameter "instruction" dalam Bahasa Inggris yang jelas dan spesifik berdasarkan permintaan pengguna, supaya hasil editnya lebih akurat. JANGAN panggil untuk permintaan animasi/video (itu tugas "animate_image"). Tool ini otomatis memakai gambar terakhir yang diunggah pengguna — kalau belum ada gambar sama sekali di percakapan ini, JANGAN panggil, cukup minta pengguna upload foto dulu. Tool ini bisa gagal karena kuota/limit harian model edit gambar habis — kalau itu terjadi, sampaikan ke pengguna dengan jujur dan ramah bahwa kuota edit gambar sedang habis dan bisa dicoba lagi nanti/besok, jangan berpura-pura berhasil. Setelah berhasil, cukup beri respons singkat yang ramah (gambar hasilnya otomatis ditampilkan oleh aplikasi).
 
 ATURAN WAJIB soal hasil "web_search": hasil yang dikembalikan tool ini SUDAH diverifikasi dari pencarian Google Search sungguhan (dari beberapa sumber/website berbeda) dan sudah mempertimbangkan tanggal hari ini yang sebenarnya — jadi PERCAYAI dan GUNAKAN hasil itu sepenuhnya sebagai fakta terkini, JANGAN dibantah, diragukan, atau dianggap "hoaks"/"belum terjadi"/"kemungkinan fiksi" hanya karena isinya terasa "di masa depan" atau bertentangan dengan pengetahuan internalmu. Pengetahuan internalmu punya batas waktu (training cutoff), sedangkan hasil web_search adalah info real-time yang lebih baru dan lebih akurat — kalau keduanya bertentangan, hasil web_search yang benar. Sampaikan jawabannya secara langsung dan percaya diri, tanpa disclaimer meragukan validitas peristiwanya. JANGAN menuliskan daftar sumber/link/domain apapun secara manual di akhir jawabanmu (misal "Sumber: ...") — daftar sumber akan ditampilkan otomatis oleh aplikasi di luar teks jawabanmu, jadi cukup fokus jawab pertanyaan penggunanya saja.
 
@@ -1360,14 +1410,28 @@ const GEMINI_BASE_FUNCTION_DECLARATIONS = [
     }
   },
   {
+    name: "replace_background",
+    description: "Ganti atau hapus BACKGROUND foto yang baru saja diunggah pengguna dalam percakapan ini (khusus urusan latar belakang, bukan mengedit subjek/orangnya). Panggil tool ini untuk permintaan seperti: 'hapus background', 'ganti background jadi pantai/Jepang/dsb', 'buang latar belakangnya'. SELALU utamakan tool ini dibanding 'edit_image' kalau permintaannya murni soal background, karena tool ini pakai remove.bg (lebih hemat kuota). Tool ini otomatis memakai gambar TERAKHIR yang diunggah pengguna di percakapan ini — kalau belum ada gambar yang diunggah sama sekali, JANGAN panggil tool ini, cukup minta pengguna upload foto dulu lewat tombol lampiran.",
+    parameters: {
+      type: "object",
+      properties: {
+        background_image_url: {
+          type: "string",
+          description: "URL gambar background baru yang relevan dengan permintaan pengguna (misal foto pantai, foto Jepang, dsb). Kosongkan/jangan isi field ini kalau pengguna cuma minta 'hapus background' tanpa background baru, atau kalau kamu tidak yakin ada URL gambar yang valid untuk tema yang diminta — background akan jadi transparan."
+        }
+      },
+      required: []
+    }
+  },
+  {
     name: "edit_image",
-    description: "Edit foto/gambar yang baru saja diunggah pengguna dalam percakapan ini menggunakan instruksi bahasa natural (AI image editing sungguhan, bukan filter/crop sederhana). Panggil tool ini ketika pengguna minta mengubah ISI/KONTEN gambar dengan instruksi teks, misalnya: 'hapus background', 'ganti background jadi pantai', 'hapus orang di belakang', 'ubah jadi hitam putih', 'ganti bajunya jadi merah', 'jadikan gaya anime', 'hilangkan noda ini', 'ubah langitnya jadi sunset'. JANGAN panggil untuk permintaan animasi/video (pakai animate_image untuk itu). Tool ini otomatis memakai gambar TERAKHIR yang diunggah pengguna di percakapan ini — kalau belum ada gambar yang diunggah sama sekali, JANGAN panggil tool ini, cukup minta pengguna upload foto dulu lewat tombol lampiran.",
+    description: "Edit foto/gambar yang baru saja diunggah pengguna dalam percakapan ini menggunakan instruksi bahasa natural, SELAIN urusan background (AI image editing sungguhan, bukan filter/crop sederhana). JANGAN pakai tool ini untuk ganti/hapus background — untuk itu pakai 'replace_background'. Panggil tool ini ketika pengguna minta mengubah ISI/KONTEN gambar selain background, misalnya: 'hapus orang di belakang', 'ubah jadi hitam putih', 'ganti bajunya jadi merah', 'jadikan gaya anime', 'hilangkan noda ini', 'ubah langitnya jadi sunset'. JANGAN panggil untuk permintaan animasi/video (pakai animate_image untuk itu). Tool ini otomatis memakai gambar TERAKHIR yang diunggah pengguna di percakapan ini — kalau belum ada gambar yang diunggah sama sekali, JANGAN panggil tool ini, cukup minta pengguna upload foto dulu lewat tombol lampiran.",
     parameters: {
       type: "object",
       properties: {
         instruction: {
           type: "string",
-          description: "Instruksi edit dalam bahasa natural, tulis ulang permintaan pengguna sejelas dan sespesifik mungkin dalam Bahasa Inggris supaya hasil edit lebih akurat, contoh: 'remove the background and replace it with a plain white background', 'change the sky to a dramatic sunset', 'remove the person in the background'."
+          description: "Instruksi edit dalam bahasa natural, tulis ulang permintaan pengguna sejelas dan sespesifik mungkin dalam Bahasa Inggris supaya hasil edit lebih akurat, contoh: 'change the sky to a dramatic sunset', 'remove the person in the background', 'turn the outfit into a red jacket'."
         }
       },
       required: ["instruction"]
@@ -1475,6 +1539,7 @@ const apikeyOverlay = document.getElementById('apikey-overlay');
 const apikeyInput = document.getElementById('apikey-input');
 const apikeyGroqInput = document.getElementById('apikey-groq-input');
 const apikeyOpenRouterInput = document.getElementById('apikey-openrouter-input');
+const apikeyRemoveBgInput = document.getElementById('apikey-removebg-input');
 const apikeyCancel = document.getElementById('apikey-cancel');
 const apikeySave = document.getElementById('apikey-save');
 
@@ -1608,6 +1673,9 @@ const translations = {
     "apikey-openrouter-title": "OpenRouter API Key",
     "apikey-openrouter-desc": "Optional: enter an OpenRouter API key to use Astra 2.0 (Qwen3 Coder) and Astra 2.5 (NVIDIA Nemotron 3 Super) — both free. The key is stored only on this device.",
     "apikey-openrouter-hint": "Get a free OpenRouter key at",
+    "apikey-removebg-title": "remove.bg API Key",
+    "apikey-removebg-desc": "Optional: enter a remove.bg API key to use the background replace/remove feature (free, 50 calls/month). The key is stored only on this device.",
+    "apikey-removebg-hint": "Get a free remove.bg key (50x/month) at",
     "model-empty-state": "No API key set up yet. Open the \"API Key\" menu in the sidebar and enter your Gemini, Groq, and/or OpenRouter key.",
     "model-desc-gemini-2.5-flash": "Fast and light for everyday chat",
     "model-desc-gemini-3.5-flash": "Smarter, great for coding & reasoning",
@@ -1649,6 +1717,9 @@ const translations = {
     "apikey-openrouter-title": "OpenRouter API Key",
     "apikey-openrouter-desc": "Opsional: masukkan API key OpenRouter untuk memakai model Astra 2.0 (Qwen3 Coder) dan Astra 2.5 (NVIDIA Nemotron 3 Super) — keduanya gratis. Key disimpan hanya di perangkat ini.",
     "apikey-openrouter-hint": "OpenRouter key gratis di",
+    "apikey-removebg-title": "remove.bg API Key",
+    "apikey-removebg-desc": "Opsional: masukkan API key remove.bg untuk memakai fitur ganti/hapus background foto (gratis 50 kali/bulan). Key disimpan hanya di perangkat ini.",
+    "apikey-removebg-hint": "remove.bg key gratis (50x/bulan) di",
     "model-empty-state": "Belum ada API key. Buka menu \"API Key\" di sidebar dan isi Gemini, Groq, dan/atau OpenRouter key dulu.",
     "model-desc-gemini-2.5-flash": "Cepat dan ringan untuk obrolan sehari-hari",
     "model-desc-gemini-3.5-flash": "Lebih pintar, unggul untuk coding & penalaran",
@@ -1769,6 +1840,7 @@ function openApiKeyModal(){
   apikeyInput.value = getGeminiKey();
   apikeyGroqInput.value = getGroqKey();
   apikeyOpenRouterInput.value = getOpenRouterKey();
+  apikeyRemoveBgInput.value = getRemoveBgKey();
   apikeyOverlay.classList.remove('hidden');
   sidebar.classList.remove('show');
   scrim.classList.remove('show');
@@ -1783,10 +1855,12 @@ apikeySave.addEventListener('click', () => {
   const val = apikeyInput.value.trim();
   const groqVal = apikeyGroqInput.value.trim();
   const openrouterVal = apikeyOpenRouterInput.value.trim();
+  const removebgVal = apikeyRemoveBgInput.value.trim();
   if (!val && !groqVal && !openrouterVal) { alert('Isi minimal salah satu API key (Gemini, Groq, atau OpenRouter), atau tekan Batal.'); return; }
   setGeminiKey(val);   // boleh kosong -> model Gemini disembunyikan dari picker
   setGroqKey(groqVal); // boleh kosong -> model Groq disembunyikan dari picker
   setOpenRouterKey(openrouterVal); // boleh kosong -> model OpenRouter disembunyikan dari picker
+  setRemoveBgKey(removebgVal); // boleh kosong -> fitur ganti background pakai fallback Gemini/pesan error
   closeApiKeyModal();
   updateSendState();
   if (typeof refreshModelUI === 'function') refreshModelUI();
@@ -3318,9 +3392,133 @@ function renderEditImageCard(container, blobUrl){
   return wrap;
 }
 
+// Render kotak progress ganti background: thumbnail foto asli user + efek shimmer sweep
+// kiri->kanan berulang + persentase 0-100% di tengah. Dipakai selagi menunggu remove.bg.
+function renderBgEditProgressCard(container, sourceImageDataUrl){
+  const wrap = document.createElement('div');
+  wrap.className = 'bgedit-progress-card';
+  wrap.innerHTML = `
+    <img src="${sourceImageDataUrl}" alt="Sedang mengganti background">
+    <div class="bgedit-shimmer-sweep"></div>
+    <div class="bgedit-progress-center">
+      <div class="bgedit-progress-pct">0%</div>
+      <div class="bgedit-progress-label">Mengganti background…</div>
+    </div>
+  `;
+  container.appendChild(wrap);
+  const pctEl = wrap.querySelector('.bgedit-progress-pct');
+  const labelEl = wrap.querySelector('.bgedit-progress-label');
+  return {
+    update(fraction, labelText){
+      const pct = Math.max(0, Math.min(100, Math.round(fraction * 100)));
+      pctEl.textContent = `${pct}%`;
+      if (labelText) labelEl.textContent = labelText;
+    },
+    remove(){ wrap.remove(); }
+  };
+}
+
 // Model image editing Google ("Nano Banana 2 Lite") — dipilih karena tidak berlabel "Paid" di AI Studio,
 // beda dari Nano Banana 2 / Nano Banana Pro yang sudah murni berbayar.
 const EDIT_IMAGE_MODEL = 'gemini-3.1-flash-lite-image';
+
+// Panggil remove.bg untuk hapus/ganti background 1 gambar. bgImageUrl opsional (kalau kosong -> background jadi transparan).
+// Return { blob, mimeType }. remove.bg gratis 50 panggilan/bulan, tanpa perlu kartu kredit.
+async function callRemoveBg(imageDataUrl, bgImageUrl){
+  const apiKey = getRemoveBgKey();
+  if (!apiKey) {
+    const err = new Error('Belum ada API key remove.bg. Buka menu "API Key" di sidebar dan masukkan key remove.bg kamu dulu (gratis, daftar di remove.bg/dashboard#api-key, tanpa kartu kredit).');
+    err.noKey = true;
+    throw err;
+  }
+
+  const match = imageDataUrl.match(/^data:(.+);base64,(.*)$/);
+  if (!match) throw new Error('Format gambar sumber tidak valid.');
+  const [, mimeType, base64Data] = match;
+  const byteChars = atob(base64Data);
+  const byteNumbers = new Array(byteChars.length);
+  for (let i = 0; i < byteChars.length; i++) byteNumbers[i] = byteChars.charCodeAt(i);
+  const sourceBlob = new Blob([new Uint8Array(byteNumbers)], { type: mimeType });
+
+  const formData = new FormData();
+  formData.append('image_file', sourceBlob, 'source.png');
+  formData.append('size', 'auto');
+  if (bgImageUrl) formData.append('bg_image_url', bgImageUrl);
+
+  const res = await fetch('https://api.remove.bg/v1.0/removebg', {
+    method: 'POST',
+    headers: { 'X-Api-Key': apiKey },
+    body: formData
+  });
+
+  if (!res.ok) {
+    const status = res.status;
+    if (status === 429) {
+      throw new Error('Kuota gratis remove.bg bulan ini sudah habis (50x/bulan). Coba lagi awal bulan depan, atau upgrade paket remove.bg kalau butuh lebih banyak.');
+    }
+    if (status === 402) {
+      throw new Error('Kredit remove.bg kamu habis. Cek dashboard remove.bg untuk detail sisa kuota.');
+    }
+    const errData = await res.json().catch(() => ({}));
+    const msg = errData?.errors?.[0]?.title || `HTTP ${status}`;
+    throw new Error(`Gagal memproses di remove.bg: ${msg}`);
+  }
+
+  const outBlob = await res.blob();
+  return { blob: outBlob, mimeType: outBlob.type || 'image/png' };
+}
+
+// Jalankan alur lengkap "replace_background": ambil gambar terakhir, proses via remove.bg,
+// tampilkan progress kotak (thumbnail + shimmer sweep + persen) selagi menunggu, lalu tampilkan hasil.
+async function runReplaceBackgroundTool(args){
+  const sourceImage = findLastUserImage();
+  if (!sourceImage) {
+    return JSON.stringify({ error: 'Belum ada gambar yang diunggah pengguna di percakapan ini. Minta pengguna mengunggah foto terlebih dahulu lewat tombol lampiran.' });
+  }
+  const bgImageUrl = (args?.background_image_url || '').trim() || null;
+
+  const container = window.__astraCurrentAnimateContainer;
+  let progressCard = null;
+  let fakeProgressTimer = null;
+  try {
+    if (container) {
+      progressCard = renderBgEditProgressCard(container, sourceImage);
+      // Progress palsu yang naik pelan-pelan sampai ~90% selama menunggu respons asli,
+      // supaya user tetap lihat pergerakan meski remove.bg tidak mengirim progress event.
+      let fakePct = 0;
+      fakeProgressTimer = setInterval(() => {
+        fakePct = Math.min(90, fakePct + Math.random() * 8 + 3);
+        progressCard.update(fakePct / 100);
+      }, 350);
+      scrollToBottom();
+    }
+
+    const { blob } = await callRemoveBg(sourceImage, bgImageUrl);
+
+    if (fakeProgressTimer) clearInterval(fakeProgressTimer);
+    if (progressCard) {
+      progressCard.update(1, 'Selesai!');
+      await new Promise(r => setTimeout(r, 250));
+      progressCard.remove();
+    }
+
+    const blobUrl = URL.createObjectURL(blob);
+    if (container) {
+      renderEditImageCard(container, blobUrl);
+      scrollToBottom();
+    }
+
+    return JSON.stringify({ success: true, message: 'Background gambar berhasil diganti/dihapus dan sudah ditampilkan ke pengguna di chat.' });
+  } catch (e) {
+    if (fakeProgressTimer) clearInterval(fakeProgressTimer);
+    if (progressCard) progressCard.remove();
+    console.error('replace_background gagal:', e);
+    if (e.noKey) {
+      return JSON.stringify({ error: e.message, noKey: true });
+    }
+    return JSON.stringify({ error: `Gagal mengganti background: ${e.message}` });
+  }
+}
 
 // Panggil Gemini image API untuk mengedit 1 gambar berdasarkan instruksi teks. Return { blob, mimeType }.
 async function callGeminiImageEdit(imageDataUrl, instruction){
@@ -3443,6 +3641,9 @@ async function executeTool(name, args){
   }
   if (name === 'animate_image') {
     return await runAnimateImageTool(args || {});
+  }
+  if (name === 'replace_background') {
+    return await runReplaceBackgroundTool(args || {});
   }
   if (name === 'edit_image') {
     return await runEditImageTool(args || {});
