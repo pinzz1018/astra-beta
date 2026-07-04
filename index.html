@@ -281,6 +281,55 @@
     display:block; cursor:pointer;
   }
 
+  /* ---------- Animate Image (Ken Burns video result) ---------- */
+  .animate-progress-card{
+    display:flex; align-items:center; gap:12px;
+    padding: 12px 14px; border-radius: 14px;
+    background: var(--accent-soft); border:1px solid var(--border);
+    max-width: 320px; margin-bottom: 8px;
+  }
+  .animate-progress-ring{ width:32px; height:32px; flex-shrink:0; position:relative; }
+  .animate-progress-ring svg{ width:100%; height:100%; transform: rotate(-90deg); }
+  .animate-progress-ring circle{ fill:none; stroke-width:3; }
+  .animate-progress-ring .track{ stroke: var(--border); }
+  .animate-progress-ring .fill{ stroke: var(--accent); stroke-linecap:round; transition: stroke-dashoffset .15s linear; }
+  .animate-progress-text{ font-size:13px; color: var(--text); display:flex; flex-direction:column; gap:2px; }
+  .animate-progress-text b{ font-size:13.5px; }
+  .animate-progress-text span{ font-size:11.5px; color: var(--text-soft); }
+
+  .animate-video-card{
+    max-width: 340px; border-radius: 16px; overflow:hidden;
+    border:1px solid var(--border); background:#000; margin-bottom:8px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.12);
+  }
+  .animate-video-card video{ width:100%; display:block; max-height: 420px; background:#000; }
+  .animate-video-toolbar{ display:flex; align-items:center; justify-content:space-between; padding: 8px 12px; background: var(--surface); }
+  .animate-video-toolbar span{ font-size:12px; color:var(--text-soft); display:flex; align-items:center; gap:6px; }
+  .animate-video-dl{
+    display:flex; align-items:center; gap:6px;
+    background:transparent; border:1px solid var(--border); color:var(--text);
+    padding:6px 11px; border-radius:20px; font-size:12.5px; cursor:pointer;
+    font-family: var(--font-body); text-decoration:none;
+  }
+  .animate-video-dl:hover{ background: var(--accent-soft); }
+
+  /* ---------- Edit Image (hasil edit gambar via Nano Banana 2 Lite) ---------- */
+  .editimg-card{
+    max-width: 320px; border-radius: 16px; overflow:hidden;
+    border:1px solid var(--border); background: var(--surface); margin-bottom:8px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.12);
+  }
+  .editimg-card img{ width:100%; display:block; max-height: 420px; object-fit:contain; background:#000; }
+  .editimg-toolbar{ display:flex; align-items:center; justify-content:space-between; padding: 8px 12px; }
+  .editimg-toolbar span{ font-size:12px; color:var(--text-soft); display:flex; align-items:center; gap:6px; }
+  .editimg-dl{
+    display:flex; align-items:center; gap:6px;
+    background:transparent; border:1px solid var(--border); color:var(--text);
+    padding:6px 11px; border-radius:20px; font-size:12.5px; cursor:pointer;
+    font-family: var(--font-body); text-decoration:none;
+  }
+  .editimg-dl:hover{ background: var(--accent-soft); }
+
   .typing{ display:flex; gap:4px; padding: 6px 0; }
   .typing span{
     width:6px;height:6px;border-radius:50%; background: var(--text-soft);
@@ -1070,6 +1119,8 @@ Kamu punya tool yang bisa dipanggil:
 1. "search_docs" — untuk mencari catatan best practice/panduan teknis internal sebelum menjawab pertanyaan coding yang butuh akurasi tinggi (misalnya soal best practice, pola desain, checklist debugging, keamanan). Panggil ini SEBELUM menjawab pertanyaan coding yang cukup penting/kompleks, supaya jawabanmu lebih akurat dan konsisten. Jangan panggil untuk obrolan biasa, sapaan, atau pertanyaan non-teknis.
 2. "run_code" — untuk menjalankan/menguji kode JavaScript secara nyata sebelum kamu sajikan ke pengguna, supaya kode yang kamu berikan benar-benar valid dan tidak error. Panggil ini ketika kamu menulis kode JavaScript yang cukup rumit (logika, fungsi, algoritma) dan ingin memastikan hasilnya benar sebelum menjawab. Jangan panggil untuk kode HTML/CSS murni atau bahasa selain JavaScript (karena run_code hanya mendukung JavaScript).
 3. "web_search" (kalau tersedia) — untuk mencari informasi terkini/faktual di internet. HANYA panggil ini kalau pesan pengguna memang cocok untuk dicari di web: berita terbaru, harga/kurs, jadwal, statistik yang berubah-ubah, fakta terkini, atau apapun yang kamu tidak tahu pasti/berada di luar pengetahuanmu. Kamu sendiri yang menentukan kapan pertanyaan pengguna butuh pencarian web — jangan panggil untuk obrolan biasa, sapaan, opini, atau pertanyaan yang sudah bisa kamu jawab sendiri dengan yakin tanpa perlu data terbaru. Tool ini mungkin tidak selalu tersedia (tergantung pengaturan pengguna); kalau kamu tidak melihat tool ini di daftar tools, jangan mencoba memanggilnya, cukup jawab dengan pengetahuanmu sendiri.
+4. "animate_image" — untuk mengubah foto/gambar yang BARU SAJA diunggah pengguna di percakapan ini menjadi video pendek dengan efek Ken Burns (zoom & pan sinematik halus). Panggil ini HANYA ketika pengguna secara eksplisit minta gambarnya dianimasikan/dijadikan video/digerakkan/dibikin hidup (contoh: "animasikan foto ini", "jadiin video dong gambarnya", "bikin gambar ini bergerak"). Tool ini otomatis memakai gambar terakhir yang diunggah pengguna di percakapan — kalau belum ada gambar yang diunggah sama sekali di percakapan ini, JANGAN panggil tool ini, cukup beri tahu pengguna untuk mengunggah foto dulu lewat tombol lampiran. Setelah tool ini selesai dan berhasil, cukup beri respons singkat yang ramah (video hasilnya akan otomatis ditampilkan oleh aplikasi, jadi jangan menjelaskan ulang secara teknis atau berlebihan).
+5. "edit_image" — untuk mengedit ISI/KONTEN foto yang BARU SAJA diunggah pengguna memakai instruksi bahasa natural (AI image editing sungguhan: hapus/ganti background, hapus objek/orang, ubah warna baju, ubah jadi gaya tertentu, colorize foto hitam-putih, dsb). Panggil ini ketika pengguna minta mengubah isi gambarnya dengan kalimat perintah (contoh: "hapus background", "ganti jadi pantai", "hilangkan orang di belakang", "ubah jadi anime"). Tulis parameter "instruction" dalam Bahasa Inggris yang jelas dan spesifik berdasarkan permintaan pengguna, supaya hasil editnya lebih akurat. JANGAN panggil untuk permintaan animasi/video (itu tugas "animate_image"). Tool ini otomatis memakai gambar terakhir yang diunggah pengguna — kalau belum ada gambar sama sekali di percakapan ini, JANGAN panggil, cukup minta pengguna upload foto dulu. Tool ini bisa gagal karena kuota/limit harian model edit gambar habis — kalau itu terjadi, sampaikan ke pengguna dengan jujur dan ramah bahwa kuota edit gambar sedang habis dan bisa dicoba lagi nanti/besok, jangan berpura-pura berhasil. Setelah berhasil, cukup beri respons singkat yang ramah (gambar hasilnya otomatis ditampilkan oleh aplikasi).
 
 ATURAN WAJIB soal hasil "web_search": hasil yang dikembalikan tool ini SUDAH diverifikasi dari pencarian Google Search sungguhan (dari beberapa sumber/website berbeda) dan sudah mempertimbangkan tanggal hari ini yang sebenarnya — jadi PERCAYAI dan GUNAKAN hasil itu sepenuhnya sebagai fakta terkini, JANGAN dibantah, diragukan, atau dianggap "hoaks"/"belum terjadi"/"kemungkinan fiksi" hanya karena isinya terasa "di masa depan" atau bertentangan dengan pengetahuan internalmu. Pengetahuan internalmu punya batas waktu (training cutoff), sedangkan hasil web_search adalah info real-time yang lebih baru dan lebih akurat — kalau keduanya bertentangan, hasil web_search yang benar. Sampaikan jawabannya secara langsung dan percaya diri, tanpa disclaimer meragukan validitas peristiwanya. JANGAN menuliskan daftar sumber/link/domain apapun secara manual di akhir jawabanmu (misal "Sumber: ...") — daftar sumber akan ditampilkan otomatis oleh aplikasi di luar teks jawabanmu, jadi cukup fokus jawab pertanyaan penggunanya saja.
 
@@ -1287,6 +1338,39 @@ const GEMINI_BASE_FUNCTION_DECLARATIONS = [
         }
       },
       required: ["code"]
+    }
+  },
+  {
+    name: "animate_image",
+    description: "Ubah foto/gambar yang baru saja diunggah pengguna dalam percakapan ini menjadi video pendek sinematik (efek Ken Burns: zoom & pan halus). Panggil tool ini HANYA ketika pengguna secara eksplisit minta foto/gambarnya dianimasikan, dibuat jadi video, digerakkan, dibikin hidup, atau permintaan sejenis (misal: 'animasikan foto ini', 'jadiin video dong', 'bikin gambar ini bergerak'). Tool ini otomatis memakai gambar TERAKHIR yang diunggah pengguna di percakapan ini — jangan panggil kalau belum ada gambar yang diunggah sama sekali, cukup beri tahu pengguna untuk upload foto dulu.",
+    parameters: {
+      type: "object",
+      properties: {
+        style: {
+          type: "string",
+          enum: ["zoom_in", "zoom_out", "pan_left", "pan_right", "auto"],
+          description: "Gaya gerakan kamera yang diinginkan. Pakai 'auto' (default) supaya arah dipilih otomatis secara sinematik berdasarkan komposisi umum, kecuali pengguna minta arah tertentu secara spesifik."
+        },
+        duration_seconds: {
+          type: "number",
+          description: "Durasi video dalam detik, antara 3 sampai 10. Default 6 detik kalau pengguna tidak menyebutkan durasi."
+        }
+      },
+      required: []
+    }
+  },
+  {
+    name: "edit_image",
+    description: "Edit foto/gambar yang baru saja diunggah pengguna dalam percakapan ini menggunakan instruksi bahasa natural (AI image editing sungguhan, bukan filter/crop sederhana). Panggil tool ini ketika pengguna minta mengubah ISI/KONTEN gambar dengan instruksi teks, misalnya: 'hapus background', 'ganti background jadi pantai', 'hapus orang di belakang', 'ubah jadi hitam putih', 'ganti bajunya jadi merah', 'jadikan gaya anime', 'hilangkan noda ini', 'ubah langitnya jadi sunset'. JANGAN panggil untuk permintaan animasi/video (pakai animate_image untuk itu). Tool ini otomatis memakai gambar TERAKHIR yang diunggah pengguna di percakapan ini — kalau belum ada gambar yang diunggah sama sekali, JANGAN panggil tool ini, cukup minta pengguna upload foto dulu lewat tombol lampiran.",
+    parameters: {
+      type: "object",
+      properties: {
+        instruction: {
+          type: "string",
+          description: "Instruksi edit dalam bahasa natural, tulis ulang permintaan pengguna sejelas dan sespesifik mungkin dalam Bahasa Inggris supaya hasil edit lebih akurat, contoh: 'remove the background and replace it with a plain white background', 'change the sky to a dramatic sunset', 'remove the person in the background'."
+        }
+      },
+      required: ["instruction"]
     }
   }
 ];
@@ -2321,7 +2405,10 @@ function renderMessage(role, text, images = [], animate = true, showReadingIndic
   if (role === 'user') {
     row.innerHTML = `<div class="bubble-col"><div class="bubble">${imagesHtml}${textHtml}</div></div><div class="avatar me">${(currentUser?.displayName || '?')[0].toUpperCase()}</div>`;
   } else {
-    row.innerHTML = `<div class="avatar ai">A</div><div class="bubble-col">${readingHtml}<div class="bubble">${imagesHtml}${textHtml}</div></div>`;
+    // "animate-slot" adalah kontainer terpisah dari .bubble (yang isinya sering di-overwrite penuh
+    // oleh efek typewriter) — supaya kartu progress/video hasil animate_image tidak pernah terhapus
+    // di tengah proses streaming teks jawaban.
+    row.innerHTML = `<div class="avatar ai">A</div><div class="bubble-col">${readingHtml}<div class="animate-slot"></div><div class="bubble">${imagesHtml}${textHtml}</div></div>`;
   }
   messagesEl.appendChild(row);
   scrollToBottom();
@@ -2953,6 +3040,396 @@ async function performWebSearch(query){
   return await performWebSearchGemini(query, todayStr);
 }
 
+/* =========================================================
+   Animate Image — render foto jadi video Ken Burns (zoom & pan sinematik)
+   100% lokal di browser (canvas + MediaRecorder), tanpa API/biaya sama sekali.
+   ========================================================= */
+
+// Easing halus (ease-in-out cubic) supaya gerakan kamera tidak terasa mekanis/linear.
+function kbEaseInOutCubic(t){
+  return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+}
+
+// Muat data URL gambar jadi elemen <img> yang siap digambar ke canvas.
+function kbLoadImage(dataUrl){
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = () => reject(new Error('Gagal memuat gambar untuk dianimasikan.'));
+    img.src = dataUrl;
+  });
+}
+
+// Tentukan lintasan kamera (start rect & end rect dalam koordinat gambar asli) berdasarkan style.
+// Rect dinyatakan sebagai {x,y,w,h} dalam fraksi 0..1 relatif ke gambar sumber, menjaga rasio target.
+function kbComputeCameraPath(style, srcW, srcH, targetRatio){
+  // Hitung crop dasar terbesar yang muat rasio target di dalam gambar sumber.
+  const srcRatio = srcW / srcH;
+  let baseW, baseH;
+  if (srcRatio > targetRatio) {
+    baseH = srcH;
+    baseW = srcH * targetRatio;
+  } else {
+    baseW = srcW;
+    baseH = srcW / targetRatio;
+  }
+
+  // Zoom "sempit" (akhir/awal zoom-in) memakai 78% dari crop dasar -> ruang gerak pan tetap ada.
+  const zoomedW = baseW * 0.78;
+  const zoomedH = baseH * 0.78;
+
+  const centerX = (srcW - baseW) / 2;
+  const centerY = (srcH - baseH) / 2;
+
+  // Beberapa preset arah kamera yang terasa sinematik & natural, bukan sekadar geser lurus.
+  const wideRect = { x: centerX, y: centerY, w: baseW, h: baseH };
+  const tightCenter = { x: centerX + (baseW - zoomedW) / 2, y: centerY + (baseH - zoomedH) / 2, w: zoomedW, h: zoomedH };
+  const tightLeft = { x: Math.max(0, centerX), y: centerY + (baseH - zoomedH) / 2, w: zoomedW, h: zoomedH };
+  const tightRight = { x: Math.min(srcW - zoomedW, centerX + (baseW - zoomedW)), y: centerY + (baseH - zoomedH) / 2, w: zoomedW, h: zoomedH };
+
+  const presets = {
+    zoom_in:  [wideRect, tightCenter],
+    zoom_out: [tightCenter, wideRect],
+    pan_left: [tightRight, tightLeft],
+    pan_right:[tightLeft, tightRight]
+  };
+
+  if (style && presets[style]) return presets[style];
+
+  // auto: pilih salah satu preset secara pseudo-acak tapi condong ke zoom_in (paling "aman" & sinematik untuk foto apa saja)
+  const autoChoices = ['zoom_in', 'zoom_in', 'pan_right', 'zoom_out'];
+  const pick = autoChoices[Math.floor(Math.random() * autoChoices.length)];
+  return presets[pick];
+}
+
+// Render satu frame: crop area (dalam koordinat gambar asli) hasil interpolasi easing, gambar ke canvas output.
+function kbDrawFrame(ctx, img, fromRect, toRect, t, outW, outH){
+  const e = kbEaseInOutCubic(t);
+  const sx = fromRect.x + (toRect.x - fromRect.x) * e;
+  const sy = fromRect.y + (toRect.y - fromRect.y) * e;
+  const sw = fromRect.w + (toRect.w - fromRect.w) * e;
+  const sh = fromRect.h + (toRect.h - fromRect.h) * e;
+
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
+  ctx.clearRect(0, 0, outW, outH);
+  ctx.drawImage(img, sx, sy, sw, sh, 0, 0, outW, outH);
+
+  // Vignette halus supaya terasa sinematik (bukan flat/datar seperti crop biasa).
+  const grad = ctx.createRadialGradient(
+    outW / 2, outH / 2, outH * 0.42,
+    outW / 2, outH / 2, outH * 0.75
+  );
+  grad.addColorStop(0, 'rgba(0,0,0,0)');
+  grad.addColorStop(1, 'rgba(0,0,0,0.16)');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, outW, outH);
+}
+
+// Render video Ken Burns lengkap dari 1 gambar. Return Blob (video/webm).
+// onProgress(fraction 0..1) dipanggil berkala untuk update UI.
+async function renderKenBurnsVideo(imageDataUrl, { style = 'auto', durationSeconds = 6, onProgress } = {}){
+  const img = await kbLoadImage(imageDataUrl);
+  const FPS = 30;
+  const duration = Math.max(3, Math.min(10, durationSeconds || 6));
+  const totalFrames = Math.round(duration * FPS);
+
+  // Resolusi output: 1080x1350 (4:5, ramah untuk sosial media & mobile) di-cap dari resolusi sumber
+  // supaya tidak upscale gambar kecil secara berlebihan (jaga ketajaman hasil).
+  let outW = 1080, outH = 1350;
+  const maxByImage = Math.min(img.naturalWidth, 1080);
+  if (maxByImage < outW) {
+    const scale = maxByImage / outW;
+    outW = Math.round(outW * scale / 2) * 2;
+    outH = Math.round(outH * scale / 2) * 2;
+  }
+  const targetRatio = outW / outH;
+
+  const [fromRect, toRect] = kbComputeCameraPath(style, img.naturalWidth, img.naturalHeight, targetRatio);
+
+  const canvas = document.createElement('canvas');
+  canvas.width = outW;
+  canvas.height = outH;
+  const ctx = canvas.getContext('2d', { alpha: false });
+
+  if (!canvas.captureStream) {
+    throw new Error('Browser ini tidak mendukung perekaman canvas ke video (captureStream tidak tersedia).');
+  }
+
+  const stream = canvas.captureStream(FPS);
+
+  // Pilih codec terbaik yang didukung browser, prioritas kualitas VP9 lalu fallback.
+  const candidates = [
+    'video/webm;codecs=vp9',
+    'video/webm;codecs=vp8',
+    'video/webm'
+  ];
+  const mimeType = candidates.find(c => window.MediaRecorder && MediaRecorder.isTypeSupported(c)) || 'video/webm';
+  if (!window.MediaRecorder) {
+    throw new Error('Browser ini tidak mendukung MediaRecorder untuk membuat file video.');
+  }
+
+  const recorder = new MediaRecorder(stream, {
+    mimeType,
+    videoBitsPerSecond: 8_000_000 // bitrate tinggi supaya hasil tidak pecah/blur saat gerak
+  });
+
+  const chunks = [];
+  recorder.ondataavailable = (e) => { if (e.data && e.data.size) chunks.push(e.data); };
+
+  const recordedBlob = await new Promise((resolve, reject) => {
+    recorder.onerror = (e) => reject(e.error || new Error('Perekaman video gagal.'));
+    recorder.onstop = () => resolve(new Blob(chunks, { type: 'video/webm' }));
+    recorder.start();
+
+    let frame = 0;
+    const frameDurationMs = 1000 / FPS;
+    let lastTime = performance.now();
+
+    function tick(){
+      const t = frame / (totalFrames - 1);
+      kbDrawFrame(ctx, img, fromRect, toRect, Math.min(1, Math.max(0, t)), outW, outH);
+      if (onProgress) onProgress(Math.min(1, frame / totalFrames));
+      frame++;
+
+      if (frame >= totalFrames) {
+        // Beri sedikit waktu ekstra supaya frame terakhir sempat ter-capture sebelum stop.
+        setTimeout(() => recorder.stop(), 120);
+        return;
+      }
+      // Jadwalkan frame berikutnya mendekati FPS target (tanpa drift signifikan).
+      const now = performance.now();
+      const elapsed = now - lastTime;
+      lastTime = now;
+      const delay = Math.max(0, frameDurationMs - (elapsed - frameDurationMs));
+      setTimeout(tick, delay);
+    }
+    tick();
+  });
+
+  if (onProgress) onProgress(1);
+  return recordedBlob;
+}
+
+// Cari data URL gambar TERAKHIR yang diunggah user di riwayat percakapan (array global `messages`).
+function findLastUserImage(){
+  for (let i = messages.length - 1; i >= 0; i--) {
+    const m = messages[i];
+    if (m.role === 'user' && m.images && m.images.length) {
+      return m.images[m.images.length - 1];
+    }
+  }
+  return null;
+}
+
+// Render kartu progress (ring animasi) ke dalam bubble tertentu, return handle untuk update/hapus.
+function renderAnimateProgressCard(container){
+  const wrap = document.createElement('div');
+  wrap.className = 'animate-progress-card';
+  wrap.innerHTML = `
+    <div class="animate-progress-ring">
+      <svg viewBox="0 0 36 36">
+        <circle class="track" cx="18" cy="18" r="15.5"></circle>
+        <circle class="fill" cx="18" cy="18" r="15.5" stroke-dasharray="97.4" stroke-dashoffset="97.4"></circle>
+      </svg>
+    </div>
+    <div class="animate-progress-text"><b>Menganimasikan gambar…</b><span>Merender video 0%</span></div>
+  `;
+  container.appendChild(wrap);
+  const fillCircle = wrap.querySelector('.fill');
+  const label = wrap.querySelector('.animate-progress-text span');
+  const CIRC = 97.4;
+  return {
+    update(fraction){
+      const offset = CIRC - CIRC * fraction;
+      fillCircle.style.strokeDashoffset = String(offset);
+      label.textContent = `Merender video ${Math.round(fraction * 100)}%`;
+    },
+    remove(){ wrap.remove(); }
+  };
+}
+
+// Render kartu video hasil akhir (dengan tombol download) ke dalam bubble tertentu.
+function renderAnimateVideoCard(container, blobUrl, durationSeconds){
+  const wrap = document.createElement('div');
+  wrap.className = 'animate-video-card';
+  wrap.innerHTML = `
+    <video src="${blobUrl}" controls autoplay loop muted playsinline></video>
+    <div class="animate-video-toolbar">
+      <span>🎬 Video · ${durationSeconds}s</span>
+      <a class="animate-video-dl" href="${blobUrl}" download="astra-animate-${Date.now()}.webm">⬇ Unduh</a>
+    </div>
+  `;
+  container.appendChild(wrap);
+  return wrap;
+}
+
+// Jalankan alur lengkap "animate_image": ambil gambar terakhir, render video, tampilkan di bubble aktif.
+// Mengembalikan string ringkas untuk dikirim balik ke model (bukan blob-nya, karena LLM tidak butuh binary).
+async function runAnimateImageTool(args){
+  const sourceImage = findLastUserImage();
+  if (!sourceImage) {
+    return JSON.stringify({ error: 'Belum ada gambar yang diunggah pengguna di percakapan ini. Minta pengguna mengunggah foto terlebih dahulu lewat tombol lampiran.' });
+  }
+
+  const container = window.__astraCurrentAnimateContainer;
+  const duration = Math.max(3, Math.min(10, Number(args?.duration_seconds) || 6));
+  const style = args?.style || 'auto';
+
+  let progressCard = null;
+  try {
+    if (container) progressCard = renderAnimateProgressCard(container);
+    scrollToBottom();
+
+    const blob = await renderKenBurnsVideo(sourceImage, {
+      style,
+      durationSeconds: duration,
+      onProgress: (frac) => { if (progressCard) progressCard.update(frac); }
+    });
+
+    if (progressCard) progressCard.remove();
+
+    const blobUrl = URL.createObjectURL(blob);
+    if (container) {
+      renderAnimateVideoCard(container, blobUrl, duration);
+      scrollToBottom();
+    }
+
+    return JSON.stringify({ success: true, message: `Video Ken Burns berhasil dibuat (${duration} detik) dan sudah ditampilkan ke pengguna di chat.` });
+  } catch (e) {
+    if (progressCard) progressCard.remove();
+    console.error('animate_image gagal:', e);
+    return JSON.stringify({ error: `Gagal membuat video: ${e.message}` });
+  }
+}
+
+// Render kartu hasil edit gambar (dengan tombol download) ke dalam bubble tertentu.
+function renderEditImageCard(container, blobUrl){
+  const wrap = document.createElement('div');
+  wrap.className = 'editimg-card';
+  wrap.innerHTML = `
+    <img src="${blobUrl}" alt="Hasil edit gambar">
+    <div class="editimg-toolbar">
+      <span>🖼️ Hasil edit</span>
+      <a class="editimg-dl" href="${blobUrl}" download="astra-edit-${Date.now()}.png">⬇ Unduh</a>
+    </div>
+  `;
+  container.appendChild(wrap);
+  return wrap;
+}
+
+// Model image editing Google ("Nano Banana 2 Lite") — dipilih karena tidak berlabel "Paid" di AI Studio,
+// beda dari Nano Banana 2 / Nano Banana Pro yang sudah murni berbayar.
+const EDIT_IMAGE_MODEL = 'gemini-3.1-flash-lite-image';
+
+// Panggil Gemini image API untuk mengedit 1 gambar berdasarkan instruksi teks. Return { blob, mimeType }.
+async function callGeminiImageEdit(imageDataUrl, instruction){
+  const apiKey = getGeminiKey();
+  if (!apiKey) {
+    const err = new Error('Belum ada API key Gemini. Buka menu "API Key" di sidebar dan masukkan key Gemini kamu dulu (fitur edit gambar selalu butuh key Gemini, walau kamu sedang memakai model Groq/OpenRouter untuk chat).');
+    err.noKey = true;
+    throw err;
+  }
+
+  const match = imageDataUrl.match(/^data:(.+);base64,(.*)$/);
+  if (!match) throw new Error('Format gambar sumber tidak valid.');
+  const [, mimeType, base64Data] = match;
+
+  const body = {
+    contents: [{
+      role: 'user',
+      parts: [
+        { inline_data: { mime_type: mimeType, data: base64Data } },
+        { text: instruction }
+      ]
+    }],
+    generationConfig: {
+      responseModalities: ['TEXT', 'IMAGE']
+    }
+  };
+
+  const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${EDIT_IMAGE_MODEL}:generateContent`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-goog-api-key': apiKey
+    },
+    body: JSON.stringify(body)
+  });
+
+  if (!res.ok) {
+    const errData = await res.json().catch(() => ({}));
+    const status = res.status;
+    if (status === 429) {
+      throw new Error('Kuota edit gambar harian sudah habis. Coba lagi nanti atau besok ya.');
+    }
+    throw new Error(errData?.error?.message || `HTTP ${status}`);
+  }
+
+  const data = await res.json();
+  const parts = data?.candidates?.[0]?.content?.parts || [];
+  const imagePart = parts.find(p => p.inlineData || p.inline_data);
+  if (!imagePart) {
+    // Kadang model menolak/hanya membalas teks (misal karena kebijakan konten) — sampaikan teks itu sebagai error.
+    const textPart = parts.find(p => p.text);
+    throw new Error(textPart?.text || 'Model tidak mengembalikan gambar hasil edit.');
+  }
+
+  const inline = imagePart.inlineData || imagePart.inline_data;
+  const outMimeType = inline.mimeType || inline.mime_type || 'image/png';
+  const outBase64 = inline.data;
+
+  // Konversi base64 -> Blob tanpa memuat semuanya sebagai data URL raksasa di memori.
+  const byteChars = atob(outBase64);
+  const byteNumbers = new Array(byteChars.length);
+  for (let i = 0; i < byteChars.length; i++) byteNumbers[i] = byteChars.charCodeAt(i);
+  const blob = new Blob([new Uint8Array(byteNumbers)], { type: outMimeType });
+
+  return { blob, mimeType: outMimeType };
+}
+
+// Jalankan alur lengkap "edit_image": ambil gambar terakhir, edit via Gemini, tampilkan di bubble aktif.
+async function runEditImageTool(args){
+  const sourceImage = findLastUserImage();
+  if (!sourceImage) {
+    return JSON.stringify({ error: 'Belum ada gambar yang diunggah pengguna di percakapan ini. Minta pengguna mengunggah foto terlebih dahulu lewat tombol lampiran.' });
+  }
+  const instruction = (args?.instruction || '').trim();
+  if (!instruction) {
+    return JSON.stringify({ error: 'Instruksi edit tidak boleh kosong.' });
+  }
+
+  const container = window.__astraCurrentAnimateContainer;
+  let progressCard = null;
+  try {
+    if (container) {
+      progressCard = renderAnimateProgressCard(container);
+      progressCard.update(0.15);
+      const label = progressCard;
+    }
+    scrollToBottom();
+
+    const { blob } = await callGeminiImageEdit(sourceImage, instruction);
+
+    if (progressCard) progressCard.remove();
+
+    const blobUrl = URL.createObjectURL(blob);
+    if (container) {
+      renderEditImageCard(container, blobUrl);
+      scrollToBottom();
+    }
+
+    return JSON.stringify({ success: true, message: 'Gambar berhasil diedit dan sudah ditampilkan ke pengguna di chat.' });
+  } catch (e) {
+    if (progressCard) progressCard.remove();
+    console.error('edit_image gagal:', e);
+    if (e.noKey) {
+      return JSON.stringify({ error: e.message, noKey: true });
+    }
+    return JSON.stringify({ error: `Gagal mengedit gambar: ${e.message}` });
+  }
+}
+
 // Jalankan tool lokal berdasarkan nama & argumen dari Gemini.
 async function executeTool(name, args){
   if (name === 'search_docs') {
@@ -2963,6 +3440,12 @@ async function executeTool(name, args){
   }
   if (name === 'web_search') {
     return await performWebSearch(args.query || '');
+  }
+  if (name === 'animate_image') {
+    return await runAnimateImageTool(args || {});
+  }
+  if (name === 'edit_image') {
+    return await runEditImageTool(args || {});
   }
   return JSON.stringify({ error: `Tool tidak dikenal: ${name}` });
 }
@@ -3187,6 +3670,7 @@ async function handleSend(){
       streamRow = renderMessage('model', '', [], true, true);
       const bubble = streamRow.querySelector('.bubble');
       typewriter = createTypewriter(bubble);
+      window.__astraCurrentAnimateContainer = streamRow.querySelector('.animate-slot') || null;
     }
 
     const { text: reply, searchGroups } = await askAstraStream(
@@ -3197,6 +3681,7 @@ async function handleSend(){
           streamRow = renderMessage('model', '');
           const bubble = streamRow.querySelector('.bubble');
           typewriter = createTypewriter(bubble);
+          window.__astraCurrentAnimateContainer = streamRow.querySelector('.animate-slot') || null;
         }
         // Begitu Astra mulai mengirim teks jawaban, indikator pencarian web (kalau ada) disembunyikan.
         hideSearchIndicator(streamRow);
@@ -3204,13 +3689,14 @@ async function handleSend(){
       },
       (toolName) => {
         // toolName diisi saat sebuah tool mulai dieksekusi, null saat selesai.
+        if (!streamRow) {
+          removeTyping();
+          streamRow = renderMessage('model', '');
+          const bubble = streamRow.querySelector('.bubble');
+          typewriter = createTypewriter(bubble);
+          window.__astraCurrentAnimateContainer = streamRow.querySelector('.animate-slot') || null;
+        }
         if (toolName === 'web_search') {
-          if (!streamRow) {
-            removeTyping();
-            streamRow = renderMessage('model', '');
-            const bubble = streamRow.querySelector('.bubble');
-            typewriter = createTypewriter(bubble);
-          }
           showSearchIndicator(streamRow);
         } else if (toolName === null && streamRow) {
           hideSearchIndicator(streamRow);
@@ -3218,8 +3704,9 @@ async function handleSend(){
       }
     );
     if (streamRow) hideSearchIndicator(streamRow);
-    // Sisipkan chip link sumber (kalau ada web_search) tepat setelah bagian jawaban yang relevan.
+    // Sisipkan chip link sumber (kalau ada web_search) tepat setelah bagian jawaban yang terkait.
     if (typewriter) await typewriter.finish(searchGroups);
+    window.__astraCurrentAnimateContainer = null;
     messages.push({ role: 'model', text: reply, searchGroups });
     saveMessage('model', reply, [], searchGroups).catch(e => console.error(e));
   } catch (e) {
