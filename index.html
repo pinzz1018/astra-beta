@@ -993,18 +993,27 @@ function isSerperActive(){ return !!getSerperKey(); }
 const ASTRA_MODELS = {
   "gemini-2.5-flash": { label: "Astra 1.0 Flash", provider: "gemini", desc: "Cepat dan ringan untuk obrolan sehari-hari" },
   "gemini-3.5-flash": { label: "Astra 2.0 Flash", provider: "gemini", desc: "Lebih pintar, unggul untuk coding & penalaran" },
-  "llama-3.1-8b-instant": { label: "Astra Groq Instant", provider: "groq", desc: "Model Llama 3.1 8B via Groq — super cepat" }
+  "llama-3.1-8b-instant": { label: "Astra 1.0 Super Flash", provider: "groq", desc: "Model Llama 3.1 8B via Groq — super cepat" }
 };
 function isModelAvailable(modelId){
   const info = ASTRA_MODELS[modelId];
   if (!info) return false;
   if (info.provider === 'groq') return !!getGroqKey();
-  return true; // model gemini selalu dianggap tersedia (validasi key dilakukan saat request)
+  return !!getGeminiKey(); // model gemini butuh Gemini key terisi supaya muncul di picker
+}
+// Cari model default pertama yang tersedia sesuai key yang sudah diisi user (urutan: gemini dulu, baru groq).
+function getFirstAvailableModel(){
+  const fallbackOrder = ["gemini-2.5-flash", "gemini-3.5-flash", "llama-3.1-8b-instant"];
+  for (const id of fallbackOrder) {
+    if (isModelAvailable(id)) return id;
+  }
+  return null; // tidak ada key sama sekali terisi
 }
 function getSelectedModel(){
   const saved = localStorage.getItem('astra-model');
   if (saved && ASTRA_MODELS[saved] && isModelAvailable(saved)) return saved;
-  return "gemini-2.5-flash";
+  // Model tersimpan tidak valid/tidak tersedia lagi (misal key-nya baru dihapus) -> cari model lain yang tersedia.
+  return getFirstAvailableModel() || "gemini-2.5-flash"; // fallback terakhir kalau belum ada key sama sekali diisi
 }
 function setSelectedModel(model){
   localStorage.setItem('astra-model', model);
@@ -1462,6 +1471,7 @@ const translations = {
     "apikey-groq-title": "Groq API Key",
     "apikey-groq-desc": "Optional: enter a Groq API key to use the Llama 3.1 8B Instant model (faster/cheaper). The key is stored only on this device.",
     "apikey-groq-hint": "Get a free Groq key at",
+    "model-empty-state": "No API key set up yet. Open the \"API Key\" menu in the sidebar and enter your Gemini and/or Groq key.",
     "cancel": "Cancel",
     "save": "Save",
     "welcome-title": "How can I help you today?",
@@ -1494,6 +1504,7 @@ const translations = {
     "apikey-groq-title": "Groq API Key",
     "apikey-groq-desc": "Opsional: masukkan API key Groq untuk memakai model Llama 3.1 8B Instant (lebih cepat/murah). Key disimpan hanya di perangkat ini.",
     "apikey-groq-hint": "Groq key gratis di",
+    "model-empty-state": "Belum ada API key. Buka menu \"API Key\" di sidebar dan isi Gemini dan/atau Groq key dulu.",
     "cancel": "Batal",
     "save": "Simpan",
     "welcome-title": "Ada yang bisa dibantu?",
@@ -1613,9 +1624,9 @@ apikeyOverlay.addEventListener('click', (e) => { if (e.target === apikeyOverlay)
 apikeySave.addEventListener('click', () => {
   const val = apikeyInput.value.trim();
   const groqVal = apikeyGroqInput.value.trim();
-  if (!val) { alert('Isi dulu API key Gemini-nya, atau tekan Batal.'); return; }
-  setGeminiKey(val);
-  setGroqKey(groqVal); // boleh kosong (opsional) — mengosongkan berarti model Groq disembunyikan lagi
+  if (!val && !groqVal) { alert('Isi minimal salah satu API key (Gemini atau Groq), atau tekan Batal.'); return; }
+  setGeminiKey(val);   // boleh kosong -> model Gemini disembunyikan dari picker
+  setGroqKey(groqVal); // boleh kosong -> model Groq disembunyikan dari picker
   closeApiKeyModal();
   updateSendState();
   if (typeof refreshModelUI === 'function') refreshModelUI();
@@ -1752,8 +1763,17 @@ function rebuildModelOptions(){
   if (!modelOptionsContainer) return;
   const current = getSelectedModel();
   modelOptionsContainer.innerHTML = '';
-  Object.keys(ASTRA_MODELS).forEach(modelId => {
-    if (!isModelAvailable(modelId)) return; // sembunyikan model Groq kalau belum ada key-nya
+  const availableIds = Object.keys(ASTRA_MODELS).filter(isModelAvailable);
+  if (!availableIds.length) {
+    const empty = document.createElement('div');
+    empty.className = 'model-option-desc';
+    empty.style.padding = '12px 4px';
+    const dict = translations[getLang()] || translations.en;
+    empty.textContent = dict['model-empty-state'];
+    modelOptionsContainer.appendChild(empty);
+    return;
+  }
+  availableIds.forEach(modelId => {
     const info = ASTRA_MODELS[modelId];
     const el = document.createElement('div');
     el.className = 'model-option' + (modelId === current ? ' selected' : '');
