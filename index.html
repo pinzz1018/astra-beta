@@ -1171,7 +1171,7 @@ Kamu punya tool yang bisa dipanggil:
 2. "run_code" — untuk menjalankan/menguji kode JavaScript secara nyata sebelum kamu sajikan ke pengguna, supaya kode yang kamu berikan benar-benar valid dan tidak error. Panggil ini ketika kamu menulis kode JavaScript yang cukup rumit (logika, fungsi, algoritma) dan ingin memastikan hasilnya benar sebelum menjawab. Jangan panggil untuk kode HTML/CSS murni atau bahasa selain JavaScript (karena run_code hanya mendukung JavaScript).
 3. "web_search" (kalau tersedia) — untuk mencari informasi terkini/faktual di internet. HANYA panggil ini kalau pesan pengguna memang cocok untuk dicari di web: berita terbaru, harga/kurs, jadwal, statistik yang berubah-ubah, fakta terkini, atau apapun yang kamu tidak tahu pasti/berada di luar pengetahuanmu. Kamu sendiri yang menentukan kapan pertanyaan pengguna butuh pencarian web — jangan panggil untuk obrolan biasa, sapaan, opini, atau pertanyaan yang sudah bisa kamu jawab sendiri dengan yakin tanpa perlu data terbaru. Tool ini mungkin tidak selalu tersedia (tergantung pengaturan pengguna); kalau kamu tidak melihat tool ini di daftar tools, jangan mencoba memanggilnya, cukup jawab dengan pengetahuanmu sendiri.
 4. "animate_image" — untuk mengubah foto/gambar yang BARU SAJA diunggah pengguna di percakapan ini menjadi video pendek dengan efek Ken Burns (zoom & pan sinematik halus). Panggil ini HANYA ketika pengguna secara eksplisit minta gambarnya dianimasikan/dijadikan video/digerakkan/dibikin hidup (contoh: "animasikan foto ini", "jadiin video dong gambarnya", "bikin gambar ini bergerak"). Tool ini otomatis memakai gambar terakhir yang diunggah pengguna di percakapan — kalau belum ada gambar yang diunggah sama sekali di percakapan ini, JANGAN panggil tool ini, cukup beri tahu pengguna untuk mengunggah foto dulu lewat tombol lampiran. Setelah tool ini selesai dan berhasil, cukup beri respons singkat yang ramah (video hasilnya akan otomatis ditampilkan oleh aplikasi, jadi jangan menjelaskan ulang secara teknis atau berlebihan).
-5. "replace_background" — untuk mengganti atau menghapus BACKGROUND foto yang BARU SAJA diunggah pengguna (khusus urusan latar belakang saja, bukan mengedit subjek/orangnya). Panggil ini untuk permintaan seperti: "hapus background", "ganti background jadi pantai/Jepang/hitam/putih/dsb", "buang latar belakangnya", "background-nya diganti jadi...". Tool ini pakai remove.bg (gratis, bukan Gemini), jauh lebih hemat kuota dibanding "edit_image", jadi SELALU utamakan tool ini kalau permintaannya murni soal ganti/hapus background. Kalau pengguna menyebut tempat/tema tertentu untuk background barunya (misal "Jepang", "pantai", "luar angkasa"), isi parameter "background_image_url" dengan URL gambar yang relevan dan cocok (kamu boleh pakai URL gambar hasil pengetahuanmu atau biarkan kosong kalau tidak yakin ada URL yang valid — kalau dikosongkan, background akan dihapus jadi transparan saja tanpa diganti). Tool ini otomatis memakai gambar terakhir yang diunggah pengguna — kalau belum ada gambar sama sekali di percakapan ini, JANGAN panggil, cukup minta pengguna upload foto dulu. Tool ini bisa gagal karena kuota bulanan gratis remove.bg habis (50x/bulan) — kalau itu terjadi, sampaikan ke pengguna dengan jujur dan ramah bahwa kuota bulan ini sudah habis dan akan reset bulan depan. Setelah berhasil, cukup beri respons singkat yang ramah (gambar hasilnya otomatis ditampilkan oleh aplikasi).
+5. "replace_background" — untuk mengganti atau menghapus BACKGROUND foto yang BARU SAJA diunggah pengguna (khusus urusan latar belakang saja, bukan mengedit subjek/orangnya). Panggil ini untuk permintaan seperti: "hapus background", "ganti background jadi pantai/Jepang/hitam/putih/dsb", "buang latar belakangnya", "background-nya diganti jadi...". Tool ini pakai remove.bg (gratis, bukan Gemini), jauh lebih hemat kuota dibanding "edit_image", jadi SELALU utamakan tool ini kalau permintaannya murni soal ganti/hapus background. Kalau pengguna menyebut tempat/tema tertentu untuk background barunya (misal "Jepang", "pantai", "luar angkasa"), isi parameter "background_theme_prompt" dengan deskripsi singkat dalam Bahasa Inggris tentang pemandangan/tema itu (contoh: "Mount Fuji Japan scenery with cherry blossoms", "tropical beach sunset") — JANGAN pernah mengisi dengan URL gambar sungguhan, karena background akan digenerate otomatis oleh sistem dari deskripsi itu (bukan kamu yang mencari URL). Kalau pengguna cuma minta "hapus background" tanpa sebutkan tema baru, biarkan parameter ini kosong (background akan jadi transparan). Tool ini otomatis memakai gambar terakhir yang diunggah pengguna — kalau belum ada gambar sama sekali di percakapan ini, JANGAN panggil, cukup minta pengguna upload foto dulu. Tool ini bisa gagal karena kuota bulanan gratis remove.bg habis (50x/bulan) — kalau itu terjadi, sampaikan ke pengguna dengan jujur dan ramah bahwa kuota bulan ini sudah habis dan akan reset bulan depan. Setelah berhasil, cukup beri respons singkat yang ramah (gambar hasilnya otomatis ditampilkan oleh aplikasi).
 6. "edit_image" — untuk mengedit ISI/KONTEN foto yang BARU SAJA diunggah pengguna memakai instruksi bahasa natural, SELAIN urusan background (hapus objek/orang, ubah warna baju, ubah jadi gaya tertentu, colorize foto hitam-putih, dsb). JANGAN pakai tool ini untuk permintaan ganti/hapus background — untuk itu pakai "replace_background" karena lebih hemat kuota. Panggil "edit_image" ketika pengguna minta mengubah isi gambarnya dengan kalimat perintah selain background (contoh: "hilangkan orang di belakang", "ubah jadi anime", "ganti warna baju jadi merah"). Tulis parameter "instruction" dalam Bahasa Inggris yang jelas dan spesifik berdasarkan permintaan pengguna, supaya hasil editnya lebih akurat. JANGAN panggil untuk permintaan animasi/video (itu tugas "animate_image"). Tool ini otomatis memakai gambar terakhir yang diunggah pengguna — kalau belum ada gambar sama sekali di percakapan ini, JANGAN panggil, cukup minta pengguna upload foto dulu. Tool ini bisa gagal karena kuota/limit harian model edit gambar habis — kalau itu terjadi, sampaikan ke pengguna dengan jujur dan ramah bahwa kuota edit gambar sedang habis dan bisa dicoba lagi nanti/besok, jangan berpura-pura berhasil. Setelah berhasil, cukup beri respons singkat yang ramah (gambar hasilnya otomatis ditampilkan oleh aplikasi).
 
 ATURAN WAJIB soal hasil "web_search": hasil yang dikembalikan tool ini SUDAH diverifikasi dari pencarian Google Search sungguhan (dari beberapa sumber/website berbeda) dan sudah mempertimbangkan tanggal hari ini yang sebenarnya — jadi PERCAYAI dan GUNAKAN hasil itu sepenuhnya sebagai fakta terkini, JANGAN dibantah, diragukan, atau dianggap "hoaks"/"belum terjadi"/"kemungkinan fiksi" hanya karena isinya terasa "di masa depan" atau bertentangan dengan pengetahuan internalmu. Pengetahuan internalmu punya batas waktu (training cutoff), sedangkan hasil web_search adalah info real-time yang lebih baru dan lebih akurat — kalau keduanya bertentangan, hasil web_search yang benar. Sampaikan jawabannya secara langsung dan percaya diri, tanpa disclaimer meragukan validitas peristiwanya. JANGAN menuliskan daftar sumber/link/domain apapun secara manual di akhir jawabanmu (misal "Sumber: ...") — daftar sumber akan ditampilkan otomatis oleh aplikasi di luar teks jawabanmu, jadi cukup fokus jawab pertanyaan penggunanya saja.
@@ -1417,9 +1417,9 @@ const GEMINI_BASE_FUNCTION_DECLARATIONS = [
     parameters: {
       type: "object",
       properties: {
-        background_image_url: {
+        background_theme_prompt: {
           type: "string",
-          description: "URL gambar background baru yang relevan dengan permintaan pengguna (misal foto pantai, foto Jepang, dsb). Kosongkan/jangan isi field ini kalau pengguna cuma minta 'hapus background' tanpa background baru, atau kalau kamu tidak yakin ada URL gambar yang valid untuk tema yang diminta — background akan jadi transparan."
+          description: "Deskripsi singkat dalam Bahasa Inggris tentang tema/pemandangan background baru yang diminta pengguna, contoh: 'Mount Fuji Japan scenery with cherry blossoms', 'tropical beach at sunset', 'outer space with stars and galaxy'. Background akan DIGENERATE OTOMATIS oleh sistem dari deskripsi ini — JANGAN isi field ini dengan URL gambar. Kosongkan field ini kalau pengguna cuma minta 'hapus background' tanpa menyebutkan tema baru — background akan jadi transparan."
         }
       },
       required: []
@@ -3477,7 +3477,13 @@ async function runReplaceBackgroundTool(args){
   if (!sourceImage) {
     return JSON.stringify({ error: 'Belum ada gambar yang diunggah pengguna di percakapan ini. Minta pengguna mengunggah foto terlebih dahulu lewat tombol lampiran.' });
   }
-  const bgImageUrl = (args?.background_image_url || '').trim() || null;
+  const themePrompt = (args?.background_theme_prompt || '').trim();
+  // URL background dibuat otomatis lewat Pollinations.ai (image generation gratis, tanpa API key,
+  // tanpa perlu AI menebak-nebak URL gambar asli yang bisa saja tidak valid/broken).
+  // Kalau themePrompt kosong (user cuma minta "hapus background" saja), bgImageUrl dibiarkan null -> transparan.
+  const bgImageUrl = themePrompt
+    ? `https://image.pollinations.ai/prompt/${encodeURIComponent(themePrompt + ', background scenery, wide shot, no people, no text, no watermark')}?width=1024&height=1024&nologo=true`
+    : null;
 
   const container = window.__astraCurrentAnimateContainer;
   let progressCard = null;
@@ -3495,7 +3501,26 @@ async function runReplaceBackgroundTool(args){
       scrollToBottom();
     }
 
-    const { blob } = await callRemoveBg(sourceImage, bgImageUrl);
+    let result;
+    let usedFallbackTransparent = false;
+    try {
+      result = await callRemoveBg(sourceImage, bgImageUrl);
+    } catch (firstErr) {
+      // Kalau gagal dan tadinya kita coba pakai background baru (bgImageUrl terisi),
+      // coba sekali lagi TANPA background (transparan saja) — supaya user tetap dapat hasil
+      // (background terhapus) daripada gagal total gara-gara URL background bermasalah.
+      if (bgImageUrl && !firstErr.noKey) {
+        try {
+          result = await callRemoveBg(sourceImage, null);
+          usedFallbackTransparent = true;
+        } catch (secondErr) {
+          throw secondErr;
+        }
+      } else {
+        throw firstErr;
+      }
+    }
+    const { blob } = result;
 
     if (fakeProgressTimer) clearInterval(fakeProgressTimer);
     if (progressCard) {
@@ -3510,6 +3535,9 @@ async function runReplaceBackgroundTool(args){
       scrollToBottom();
     }
 
+    if (usedFallbackTransparent) {
+      return JSON.stringify({ success: true, message: 'Background gambar berhasil DIHAPUS (jadi transparan) dan sudah ditampilkan ke pengguna. Catatan: mengganti background dengan tema baru sedang bermasalah, jadi cuma berhasil menghapusnya saja — beri tahu pengguna soal ini dengan jujur dan tawarkan coba lagi.' });
+    }
     return JSON.stringify({ success: true, message: 'Background gambar berhasil diganti/dihapus dan sudah ditampilkan ke pengguna di chat.' });
   } catch (e) {
     if (fakeProgressTimer) clearInterval(fakeProgressTimer);
