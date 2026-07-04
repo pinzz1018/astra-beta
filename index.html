@@ -4475,6 +4475,7 @@ async function handleSend(){
     let artifactChip = null;         // instance chip status di dalam bubble chat
     let artifactPanelOpened = false; // sudah pernah buka panel live untuk turn ini?
     let lastExtractedCode = '';      // kode HTML terakhir yang berhasil diekstrak dari teks parsial
+    let sawSearchDocsCall = false;   // true HANYA kalau search_docs beneran dipanggil (bukan asumsi)
 
     // Ambil isi code block ```html ... ``` (boleh belum tertutup, untuk kondisi masih streaming)
     // dari teks jawaban parsial, supaya bisa didorong live ke panel artefak.
@@ -4486,6 +4487,17 @@ async function handleSend(){
       return null;
     }
 
+    // Buang code block HTML dari teks yang dirender ke bubble chat SAAT mode artefak aktif —
+    // isinya sudah sepenuhnya diwakili oleh chip + panel artefak, jadi tidak perlu ditampilkan dobel
+    // sebagai teks mentah di dalam chat. Teks penjelasan di luar code block tetap ditampilkan seperti biasa.
+    function stripHtmlCodeBlockForChat(fullText){
+      return fullText
+        .replace(/```html\s*\n?[\s\S]*?```/gi, '')
+        .replace(/```html\s*\n?[\s\S]*$/i, '')
+        .replace(/\n{3,}/g, '\n\n')
+        .trim();
+    }
+
     if (wantsHtmlCode) {
       removeTyping();
       streamRow = renderMessage('model', '', [], true, false);
@@ -4494,7 +4506,10 @@ async function handleSend(){
       window.__astraCurrentAnimateContainer = streamRow.querySelector('.animate-slot') || null;
       // Chip status muncul duluan di atas bubble jawaban, mewakili proses pembuatan filenya.
       // (Menggantikan indikator "Reading coding guidelines..." lama supaya tidak dobel.)
+      // Chip dimulai dari step "planning" (bukan "reading") — step "reading" hanya dipakai
+      // kalau tool search_docs BENERAN dipanggil, lihat callback onStatus di bawah.
       artifactChip = createArtifactChip(streamRow.querySelector('.bubble-col'), 'index.html');
+      artifactChip.setStep('planning', false);
     }
 
     const { text: reply, searchGroups } = await askAstraStream(
@@ -4509,10 +4524,10 @@ async function handleSend(){
         }
         // Begitu Astra mulai mengirim teks jawaban, indikator pencarian web (kalau ada) disembunyikan.
         hideSearchIndicator(streamRow);
-        typewriter.setTarget(partialText);
 
         // Kalau ini permintaan kode HTML: begitu terdeteksi mulai menulis code block,
-        // buka panel artefak secara otomatis (live) dan dorong progress kodenya real-time.
+        // buka panel artefak secara otomatis (live), dorong progress kodenya real-time,
+        // dan JANGAN tampilkan code block mentah itu di bubble chat (cukup teks di luar kode).
         if (wantsHtmlCode) {
           const code = extractHtmlCodeFromPartial(partialText);
           if (code !== null) {
@@ -4520,18 +4535,20 @@ async function handleSend(){
             if (!artifactPanelOpened) {
               artifactPanelOpened = true;
               openArtifactLive('index.html');
-              if (artifactChip) artifactChip.setStep('writing', false);
+              artifactChip.setStep('writing', false);
             } else {
               artifactPushLiveCode(code);
             }
-          } else if (artifactChip && !artifactPanelOpened) {
-            // Belum mulai code block -> masih dianggap tahap merancang fitur.
-            artifactChip.setStep('planning', false);
           }
+          typewriter.setTarget(stripHtmlCodeBlockForChat(partialText));
+        } else {
+          typewriter.setTarget(partialText);
         }
       },
       (toolName) => {
         // toolName diisi saat sebuah tool mulai dieksekusi, null saat selesai.
+        // Ini status ASLI dari tool call yang benar-benar terjadi — dipakai untuk menyinkronkan
+        // step chip artefak dengan kenyataan (bukan diasumsikan otomatis).
         if (!streamRow) {
           removeTyping();
           streamRow = renderMessage('model', '');
@@ -4543,6 +4560,11 @@ async function handleSend(){
           showSearchIndicator(streamRow);
         } else if (toolName === null && streamRow) {
           hideSearchIndicator(streamRow);
+        }
+        // search_docs beneran dipanggil -> chip pindah ke step "reading" yang sesungguhnya.
+        if (toolName === 'search_docs' && artifactChip) {
+          sawSearchDocsCall = true;
+          artifactChip.setStep('reading', false);
         }
       }
     );
@@ -4557,7 +4579,12 @@ async function handleSend(){
     }
 
     // Sisipkan chip link sumber (kalau ada web_search) tepat setelah bagian jawaban yang terkait.
-    if (typewriter) await typewriter.finish(searchGroups);
+    // Untuk mode artefak, teks final yang ditampilkan juga harus tetap tanpa code block mentahnya.
+    const finalReplyForChat = wantsHtmlCode ? stripHtmlCodeBlockForChat(reply) : reply;
+    if (typewriter) {
+      typewriter.setTarget(finalReplyForChat);
+      await typewriter.finish(searchGroups);
+    }
     window.__astraCurrentAnimateContainer = null;
     messages.push({ role: 'model', text: reply, searchGroups });
     saveMessage('model', reply, [], searchGroups).catch(e => console.error(e));
