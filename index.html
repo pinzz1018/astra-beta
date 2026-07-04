@@ -756,12 +756,16 @@
     <h2 class="apikey-title" style="margin-top:18px;" data-i18n="apikey-groq-title">Groq API Key</h2>
     <p class="apikey-desc" data-i18n="apikey-groq-desc">Opsional: masukkan API key Groq untuk memakai model Llama 3.1 8B Instant (lebih cepat/murah). Key disimpan hanya di perangkat ini.</p>
     <input id="apikey-groq-input" type="text" placeholder="gsk_..." class="apikey-input">
+    <h2 class="apikey-title" style="margin-top:18px;" data-i18n="apikey-openrouter-title">OpenRouter API Key</h2>
+    <p class="apikey-desc" data-i18n="apikey-openrouter-desc">Opsional: masukkan API key OpenRouter untuk memakai model Astra 2.0 (Qwen3 Coder) dan Astra 2.5 (NVIDIA Nemotron 3 Super) — keduanya gratis. Key disimpan hanya di perangkat ini.</p>
+    <input id="apikey-openrouter-input" type="text" placeholder="sk-or-v1-..." class="apikey-input">
     <div style="display:flex;gap:8px;margin-top:16px;">
       <button id="apikey-cancel" class="apikey-btn-secondary" data-i18n="cancel">Batal</button>
       <button id="apikey-save" class="apikey-btn-primary" data-i18n="save">Simpan</button>
     </div>
     <p class="apikey-hint" data-i18n="apikey-hint">Belum punya key? Buat gratis di <span style="color:var(--accent);">aistudio.google.com/app/apikey</span></p>
     <p class="apikey-hint" data-i18n="apikey-groq-hint">Groq key gratis di <span style="color:var(--accent);">console.groq.com/keys</span></p>
+    <p class="apikey-hint" data-i18n="apikey-openrouter-hint">OpenRouter key gratis di <span style="color:var(--accent);">openrouter.ai/keys</span></p>
   </div>
 </div>
 
@@ -978,6 +982,10 @@ function setGeminiKey(key){ localStorage.setItem('astra-gemini-key', key.trim())
 function getGroqKey(){ return localStorage.getItem('astra-groq-key') || ''; }
 function setGroqKey(key){ localStorage.setItem('astra-groq-key', key.trim()); }
 
+// --- OpenRouter API key: DIISI USER lewat menu "API Key" di sidebar, disimpan di localStorage ---
+function getOpenRouterKey(){ return localStorage.getItem('astra-openrouter-key') || ''; }
+function setOpenRouterKey(key){ localStorage.setItem('astra-openrouter-key', key.trim()); }
+
 // --- Toggle pencarian web: kalau mati, tool web_search tidak pernah didaftarkan ke Gemini ---
 function isWebSearchEnabled(){ return localStorage.getItem('astra-websearch') !== 'off'; }
 function setWebSearchEnabled(enabled){ localStorage.setItem('astra-websearch', enabled ? 'on' : 'off'); }
@@ -989,21 +997,24 @@ function clearSerperKey(){ localStorage.removeItem('astra-serper-key'); }
 function isSerperActive(){ return !!getSerperKey(); }
 
 // Semua model yang didukung. `provider` menentukan jalur request yang dipakai (lihat streamOneTurn).
-// Model Groq hanya ditampilkan di picker kalau getGroqKey() terisi (lihat refreshModelUI/rebuildModelOptions).
+// Model Groq/OpenRouter hanya ditampilkan di picker kalau key masing-masing terisi (lihat refreshModelUI/rebuildModelOptions).
 const ASTRA_MODELS = {
-  "gemini-2.5-flash": { label: "Astra 1.0 Flash", provider: "gemini", desc: "Cepat dan ringan untuk obrolan sehari-hari" },
-  "gemini-3.5-flash": { label: "Astra 2.0 Flash", provider: "gemini", desc: "Lebih pintar, unggul untuk coding & penalaran" },
-  "llama-3.1-8b-instant": { label: "Astra 1.0 Super Flash", provider: "groq", desc: "Model Llama 3.1 8B via Groq — super cepat" }
+  "gemini-2.5-flash": { label: "Astra 1.0 Flash", provider: "gemini", descKey: "model-desc-gemini-2.5-flash" },
+  "gemini-3.5-flash": { label: "Astra 2.0 Flash", provider: "gemini", descKey: "model-desc-gemini-3.5-flash" },
+  "llama-3.1-8b-instant": { label: "Astra 1.0 Super Flash", provider: "groq", descKey: "model-desc-llama-3.1-8b" },
+  "qwen/qwen3-coder:free": { label: "Astra 2.0", provider: "openrouter", descKey: "model-desc-qwen3-coder" },
+  "nvidia/nemotron-3-super-120b-a12b:free": { label: "Astra 2.5", provider: "openrouter", descKey: "model-desc-nemotron-3-super" }
 };
 function isModelAvailable(modelId){
   const info = ASTRA_MODELS[modelId];
   if (!info) return false;
   if (info.provider === 'groq') return !!getGroqKey();
+  if (info.provider === 'openrouter') return !!getOpenRouterKey();
   return !!getGeminiKey(); // model gemini butuh Gemini key terisi supaya muncul di picker
 }
-// Cari model default pertama yang tersedia sesuai key yang sudah diisi user (urutan: gemini dulu, baru groq).
+// Cari model default pertama yang tersedia sesuai key yang sudah diisi user (urutan: gemini dulu, baru groq, baru openrouter).
 function getFirstAvailableModel(){
-  const fallbackOrder = ["gemini-2.5-flash", "gemini-3.5-flash", "llama-3.1-8b-instant"];
+  const fallbackOrder = ["gemini-2.5-flash", "gemini-3.5-flash", "llama-3.1-8b-instant", "qwen/qwen3-coder:free", "nvidia/nemotron-3-super-120b-a12b:free"];
   for (const id of fallbackOrder) {
     if (isModelAvailable(id)) return id;
   }
@@ -1026,6 +1037,7 @@ function getGeminiEndpoint(){
   return `https://generativelanguage.googleapis.com/v1beta/models/${model}:streamGenerateContent?alt=sse`;
 }
 const GROQ_ENDPOINT = 'https://api.groq.com/openai/v1/chat/completions';
+const OPENROUTER_ENDPOINT = 'https://openrouter.ai/api/v1/chat/completions';
 
 const SYSTEM_PROMPT = `Kamu adalah Astra, asisten AI yang ramah, jujur, dan membantu. Jawab dengan jelas dan natural. Gunakan Bahasa Indonesia kecuali diminta bahasa lain.
 
@@ -1289,11 +1301,11 @@ const GEMINI_WEB_SEARCH_DECLARATION = {
 function buildGeminiTools(){
   const decls = [...GEMINI_BASE_FUNCTION_DECLARATIONS];
   // web_search hanya didaftarkan kalau toggle aktif DAN provider yang sedang dipakai punya jalur
-  // pencarian yang valid: Gemini selalu bisa (grounding bawaan atau Serper), sedangkan Groq
-  // butuh Serper key (Groq tidak punya web search bawaan) — kalau tidak ada, tool disembunyikan
+  // pencarian yang valid: Gemini selalu bisa (grounding bawaan atau Serper), sedangkan Groq/OpenRouter
+  // butuh Serper key (keduanya tidak punya web search bawaan) — kalau tidak ada, tool disembunyikan
   // sepenuhnya supaya model tidak pernah mencoba memanggil tool yang pasti gagal.
   const provider = getModelProvider(getSelectedModel());
-  const webSearchUsable = provider === 'gemini' || (provider === 'groq' && isSerperActive());
+  const webSearchUsable = provider === 'gemini' || ((provider === 'groq' || provider === 'openrouter') && isSerperActive());
   if (isWebSearchEnabled() && webSearchUsable) {
     decls.push(GEMINI_WEB_SEARCH_DECLARATION);
   }
@@ -1368,6 +1380,7 @@ const apikeyBtn = document.getElementById('apikey-btn');
 const apikeyOverlay = document.getElementById('apikey-overlay');
 const apikeyInput = document.getElementById('apikey-input');
 const apikeyGroqInput = document.getElementById('apikey-groq-input');
+const apikeyOpenRouterInput = document.getElementById('apikey-openrouter-input');
 const apikeyCancel = document.getElementById('apikey-cancel');
 const apikeySave = document.getElementById('apikey-save');
 
@@ -1498,7 +1511,15 @@ const translations = {
     "apikey-groq-title": "Groq API Key",
     "apikey-groq-desc": "Optional: enter a Groq API key to use the Llama 3.1 8B Instant model (faster/cheaper). The key is stored only on this device.",
     "apikey-groq-hint": "Get a free Groq key at",
-    "model-empty-state": "No API key set up yet. Open the \"API Key\" menu in the sidebar and enter your Gemini and/or Groq key.",
+    "apikey-openrouter-title": "OpenRouter API Key",
+    "apikey-openrouter-desc": "Optional: enter an OpenRouter API key to use Astra 2.0 (Qwen3 Coder) and Astra 2.5 (NVIDIA Nemotron 3 Super) — both free. The key is stored only on this device.",
+    "apikey-openrouter-hint": "Get a free OpenRouter key at",
+    "model-empty-state": "No API key set up yet. Open the \"API Key\" menu in the sidebar and enter your Gemini, Groq, and/or OpenRouter key.",
+    "model-desc-gemini-2.5-flash": "Fast and light for everyday chat",
+    "model-desc-gemini-3.5-flash": "Smarter, great for coding & reasoning",
+    "model-desc-llama-3.1-8b": "Super fast, via Groq",
+    "model-desc-qwen3-coder": "Specialized for coding, free via OpenRouter",
+    "model-desc-nemotron-3-super": "Versatile all-rounder, free via OpenRouter",
     "cancel": "Cancel",
     "save": "Save",
     "welcome-title": "How can I help you today?",
@@ -1531,7 +1552,15 @@ const translations = {
     "apikey-groq-title": "Groq API Key",
     "apikey-groq-desc": "Opsional: masukkan API key Groq untuk memakai model Llama 3.1 8B Instant (lebih cepat/murah). Key disimpan hanya di perangkat ini.",
     "apikey-groq-hint": "Groq key gratis di",
-    "model-empty-state": "Belum ada API key. Buka menu \"API Key\" di sidebar dan isi Gemini dan/atau Groq key dulu.",
+    "apikey-openrouter-title": "OpenRouter API Key",
+    "apikey-openrouter-desc": "Opsional: masukkan API key OpenRouter untuk memakai model Astra 2.0 (Qwen3 Coder) dan Astra 2.5 (NVIDIA Nemotron 3 Super) — keduanya gratis. Key disimpan hanya di perangkat ini.",
+    "apikey-openrouter-hint": "OpenRouter key gratis di",
+    "model-empty-state": "Belum ada API key. Buka menu \"API Key\" di sidebar dan isi Gemini, Groq, dan/atau OpenRouter key dulu.",
+    "model-desc-gemini-2.5-flash": "Cepat dan ringan untuk obrolan sehari-hari",
+    "model-desc-gemini-3.5-flash": "Lebih pintar, unggul untuk coding & penalaran",
+    "model-desc-llama-3.1-8b": "Super cepat, via Groq",
+    "model-desc-qwen3-coder": "Spesialis coding, gratis via OpenRouter",
+    "model-desc-nemotron-3-super": "Serbaguna segala kebutuhan, gratis via OpenRouter",
     "cancel": "Batal",
     "save": "Simpan",
     "welcome-title": "Ada yang bisa dibantu?",
@@ -1574,6 +1603,8 @@ function applyLanguage(lang){
   langCurrent.textContent = lang === 'id' ? 'Indonesia' : 'English';
   document.documentElement.lang = lang;
   localStorage.setItem('astra-lang', lang);
+  // Refresh label & deskripsi model picker (teksnya berbeda per bahasa)
+  if (typeof refreshModelUI === 'function') refreshModelUI();
   // Refresh status panel Serper (teksnya berbeda per bahasa) kalau elemennya sudah ada & Serper aktif
   if (typeof renderSerperClearOption === 'function' && typeof isSerperActive === 'function' && isSerperActive()) {
     const el = document.getElementById('serper-status');
@@ -1638,6 +1669,7 @@ applyTheme(localStorage.getItem('astra-theme') || 'light');
 function openApiKeyModal(){
   apikeyInput.value = getGeminiKey();
   apikeyGroqInput.value = getGroqKey();
+  apikeyOpenRouterInput.value = getOpenRouterKey();
   apikeyOverlay.classList.remove('hidden');
   sidebar.classList.remove('show');
   scrim.classList.remove('show');
@@ -1651,9 +1683,11 @@ apikeyOverlay.addEventListener('click', (e) => { if (e.target === apikeyOverlay)
 apikeySave.addEventListener('click', () => {
   const val = apikeyInput.value.trim();
   const groqVal = apikeyGroqInput.value.trim();
-  if (!val && !groqVal) { alert('Isi minimal salah satu API key (Gemini atau Groq), atau tekan Batal.'); return; }
+  const openrouterVal = apikeyOpenRouterInput.value.trim();
+  if (!val && !groqVal && !openrouterVal) { alert('Isi minimal salah satu API key (Gemini, Groq, atau OpenRouter), atau tekan Batal.'); return; }
   setGeminiKey(val);   // boleh kosong -> model Gemini disembunyikan dari picker
   setGroqKey(groqVal); // boleh kosong -> model Groq disembunyikan dari picker
+  setOpenRouterKey(openrouterVal); // boleh kosong -> model OpenRouter disembunyikan dari picker
   closeApiKeyModal();
   updateSendState();
   if (typeof refreshModelUI === 'function') refreshModelUI();
@@ -1800,6 +1834,7 @@ function rebuildModelOptions(){
     modelOptionsContainer.appendChild(empty);
     return;
   }
+  const dict = translations[getLang()] || translations.en;
   availableIds.forEach(modelId => {
     const info = ASTRA_MODELS[modelId];
     const el = document.createElement('div');
@@ -1808,7 +1843,7 @@ function rebuildModelOptions(){
     el.innerHTML = `
       <div class="model-option-text">
         <div class="model-option-name">${info.label}</div>
-        <div class="model-option-desc">${info.desc}</div>
+        <div class="model-option-desc">${dict[info.descKey] || ''}</div>
       </div>
       ${checkSvgMarkup()}
     `;
@@ -2513,12 +2548,155 @@ async function streamOneTurnGroq(contents, onChunk){
   return { fullText, functionCalls };
 }
 
+// Konversi format `contents` (Gemini-style) menjadi messages format OpenAI-compatible yang dipakai OpenRouter.
+// Beda dengan Groq: OpenRouter (Nemotron 3 Super) mendukung context besar, jadi pakai SYSTEM_PROMPT lengkap
+// dan tetap kirim gambar (format image_url) kalau ada, karena model ini multimodal.
+function convertContentsToOpenRouterMessages(contents){
+  const messages = [{ role: 'system', content: SYSTEM_PROMPT }];
+  for (const turn of contents) {
+    if (turn.role === 'user') {
+      const parts = turn.parts || [];
+      const textParts = parts.filter(p => p.text).map(p => p.text);
+      const imageParts = parts.filter(p => p.inlineData);
+      if (imageParts.length) {
+        const contentArr = [];
+        if (textParts.join('\n')) contentArr.push({ type: 'text', text: textParts.join('\n') });
+        for (const img of imageParts) {
+          contentArr.push({ type: 'image_url', image_url: { url: `data:${img.inlineData.mimeType};base64,${img.inlineData.data}` } });
+        }
+        messages.push({ role: 'user', content: contentArr });
+      } else {
+        messages.push({ role: 'user', content: textParts.join('\n') || '' });
+      }
+    } else if (turn.role === 'model') {
+      const textParts = (turn.parts || []).filter(p => p.text).map(p => p.text);
+      const callParts = (turn.parts || []).filter(p => p.functionCall);
+      const msg = { role: 'assistant', content: textParts.join('\n') || null };
+      if (callParts.length) {
+        msg.tool_calls = callParts.map((p, i) => ({
+          id: p.functionCall._groqId || `call_${Date.now()}_${i}`,
+          type: 'function',
+          function: { name: p.functionCall.name, arguments: JSON.stringify(p.functionCall.args || {}) }
+        }));
+      }
+      messages.push(msg);
+    } else if (turn.role === 'function') {
+      for (const p of (turn.parts || [])) {
+        if (!p.functionResponse) continue;
+        messages.push({
+          role: 'tool',
+          tool_call_id: p.functionResponse._groqId || 'call_unknown',
+          name: p.functionResponse.name,
+          content: JSON.stringify(p.functionResponse.response?.result ?? '')
+        });
+      }
+    }
+  }
+  return messages;
+}
+
+// Satu kali request stream ke OpenRouter (format OpenAI-compatible, SSE). Mengembalikan { fullText, functionCalls }.
+async function streamOneTurnOpenRouter(contents, onChunk){
+  const apiKey = getOpenRouterKey();
+  if (!apiKey) {
+    const err = new Error('Belum ada API key OpenRouter. Buka menu "API Key" di sidebar dan masukkan key OpenRouter kamu dulu.');
+    err.noKey = true;
+    throw err;
+  }
+
+  const messages = convertContentsToOpenRouterMessages(contents);
+  const tools = convertToolsToGroqFormat(buildGeminiTools()); // format tools OpenAI sama dengan Groq
+
+  const body = {
+    model: getSelectedModel(),
+    messages,
+    temperature: 0.7,
+    max_tokens: 4096,
+    stream: true
+  };
+  if (tools.length) body.tools = tools;
+
+  let res;
+  try {
+    res = await fetch(OPENROUTER_ENDPOINT, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`,
+        'HTTP-Referer': location.origin,
+        'X-Title': 'Astra'
+      },
+      body: JSON.stringify(body)
+    });
+  } catch (e) {
+    throw new Error('Gagal menghubungi OpenRouter: ' + (e.message || 'network error'));
+  }
+
+  if (!res.ok) {
+    const errData = await res.json().catch(() => ({}));
+    throw new Error(errData?.error?.message || `HTTP ${res.status} dari OpenRouter`);
+  }
+
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder('utf-8');
+  let buffer = '';
+  let fullText = '';
+  const toolCallChunks = {}; // { [index]: { id, name, argsStr } }
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+
+    const lines = buffer.split('\n');
+    buffer = lines.pop();
+
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (!trimmed.startsWith('data:')) continue;
+      const jsonStr = trimmed.slice(5).trim();
+      if (!jsonStr || jsonStr === '[DONE]') continue;
+      try {
+        const parsed = JSON.parse(jsonStr);
+        const delta = parsed?.choices?.[0]?.delta;
+        if (!delta) continue;
+        if (delta.content) {
+          fullText += delta.content;
+          onChunk(fullText);
+        }
+        if (delta.tool_calls) {
+          for (const tc of delta.tool_calls) {
+            const idx = tc.index ?? 0;
+            if (!toolCallChunks[idx]) toolCallChunks[idx] = { id: '', name: '', argsStr: '' };
+            if (tc.id) toolCallChunks[idx].id = tc.id;
+            if (tc.function?.name) toolCallChunks[idx].name += tc.function.name;
+            if (tc.function?.arguments) toolCallChunks[idx].argsStr += tc.function.arguments;
+          }
+        }
+      } catch (e) {
+        // baris belum lengkap / bukan JSON valid, skip
+      }
+    }
+  }
+
+  const functionCalls = Object.values(toolCallChunks).map(tc => {
+    let args = {};
+    try { args = tc.argsStr ? JSON.parse(tc.argsStr) : {}; } catch (e) { args = {}; }
+    return { name: tc.name, args, _groqId: tc.id };
+  });
+
+  return { fullText, functionCalls };
+}
+
 // Router: pilih jalur request sesuai provider dari model yang sedang dipilih.
-// Ini satu-satunya titik yang menentukan Gemini vs Groq — askAstraStream tidak perlu tahu bedanya.
+// Ini satu-satunya titik yang menentukan Gemini vs Groq vs OpenRouter — askAstraStream tidak perlu tahu bedanya.
 async function streamOneTurn(contents, onChunk){
   const provider = getModelProvider(getSelectedModel());
   if (provider === 'groq') {
     return await streamOneTurnGroq(contents, onChunk);
+  }
+  if (provider === 'openrouter') {
+    return await streamOneTurnOpenRouter(contents, onChunk);
   }
   return await streamOneTurnGemini(contents, onChunk);
 }
@@ -2589,13 +2767,17 @@ async function performWebSearchSerper(query, todayStr){
   const provider = getModelProvider(getSelectedModel());
   const geminiKey = getGeminiKey();
   const groqKey = getGroqKey();
+  const openrouterKey = getOpenRouterKey();
 
-  // Perlu minimal satu key (Gemini ATAU Groq) untuk meringkas hasil mentah Serper.
+  // Perlu minimal satu key (Gemini, Groq, atau OpenRouter) untuk meringkas hasil mentah Serper.
   if (provider === 'gemini' && !geminiKey) {
     return JSON.stringify({ error: 'Tidak ada API key Gemini.' });
   }
   if (provider === 'groq' && !groqKey) {
     return JSON.stringify({ error: 'Tidak ada API key Groq.' });
+  }
+  if (provider === 'openrouter' && !openrouterKey) {
+    return JSON.stringify({ error: 'Tidak ada API key OpenRouter.' });
   }
 
   // 1) Ambil hasil mentah dari Serper (Google Search API pihak ketiga, hasil organik lebih banyak)
@@ -2671,6 +2853,33 @@ ${JSON.stringify({ answerBox, knowledgeGraph, organic })}`;
       if (!res.ok) {
         const errData = await res.json().catch(() => ({}));
         return JSON.stringify({ error: errData?.error?.message || `HTTP ${res.status} dari Groq` });
+      }
+      const data = await res.json();
+      text = (data?.choices?.[0]?.message?.content || '').trim();
+    } else if (provider === 'openrouter') {
+      // Ringkas pakai model OpenRouter yang sedang dipilih user (Qwen3 Coder atau Nemotron 3 Super) — tidak butuh Gemini key sama sekali.
+      const res = await fetch(OPENROUTER_ENDPOINT, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${openrouterKey}`,
+          'HTTP-Referer': location.origin,
+          'X-Title': 'Astra'
+        },
+        body: JSON.stringify({
+          model: getSelectedModel(),
+          messages: [
+            { role: 'system', content: summarizeInstruction },
+            { role: 'user', content: query }
+          ],
+          temperature: 0.3,
+          max_tokens: 2048,
+          stream: false
+        })
+      });
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        return JSON.stringify({ error: errData?.error?.message || `HTTP ${res.status} dari OpenRouter` });
       }
       const data = await res.json();
       text = (data?.choices?.[0]?.message?.content || '').trim();
