@@ -4744,7 +4744,20 @@ function createTypewriter(bubbleEl){
    ========================================================= */
 const HTML_CODE_INTENT_KEYWORDS = [
   'html', 'game', 'canvas', 'ular', 'snake', 'tetris', 'flappy', 'pong',
-  'platformer', 'website', 'web app', 'landing page', 'aplikasi web'
+  'platformer', 'website', 'web app', 'landing page', 'aplikasi web',
+  'chatbot', 'chat bot', 'dashboard', 'kalkulator', 'calculator', 'form',
+  'todo', 'to-do', 'to do list', 'quiz', 'kuis', 'portfolio', 'portofolio',
+  'timer', 'stopwatch', 'jam', 'clock', 'kalender', 'calendar', 'notes app',
+  'aplikasi catatan', 'blog', 'e-commerce', 'ecommerce', 'toko online',
+  'login page', 'halaman login', 'signup', 'registrasi', 'profile card',
+  'kartu profil', 'card game', 'memory game', 'puzzle', 'quiz app',
+  'survey', 'polling', 'voting app', 'music player', 'pemutar musik',
+  'video player', 'gallery', 'galeri foto', 'slideshow', 'carousel',
+  'navbar', 'sidebar', 'modal', 'popup', 'animasi css', 'css animation',
+  'responsive', 'responsif', 'ui component', 'komponen ui', 'widget',
+  'app sederhana', 'simple app', 'aplikasi sederhana', 'prototype', 'prototipe',
+  'mockup', 'template', 'halaman web', 'web page', 'single page', 'spa',
+  'interactive', 'interaktif', 'drag and drop', 'drag drop'
 ];
 function isHtmlCodeRequest(text){
   const q = (text || '').toLowerCase();
@@ -4775,7 +4788,7 @@ async function handleSend(){
 
   renderTyping();
 
-  const wantsHtmlCode = isHtmlCodeRequest(text) || !!lastRunCode;
+  let wantsHtmlCode = isHtmlCodeRequest(text) || !!lastRunCode;
 
   try {
     let streamRow = null;
@@ -4841,6 +4854,16 @@ async function handleSend(){
         // Kalau ini permintaan kode HTML: begitu terdeteksi mulai menulis code block,
         // buka panel artefak secara otomatis (live), dorong progress kodenya real-time,
         // dan JANGAN tampilkan code block mentah itu di bubble chat (cukup teks di luar kode).
+        //
+        // FALLBACK PENTING: HTML_CODE_INTENT_KEYWORDS tidak bisa mencakup semua kemungkinan kata
+        // yang dipakai user ("chatbot", "dashboard", dll bisa saja lolos/kurang lengkap). Supaya
+        // kode tetap masuk ke artefak walau kata di pesan user tidak match daftar keyword, di sini
+        // kita cek juga ISI jawaban model secara langsung: begitu terdeteksi ada tag HTML dokumen
+        // lengkap (<!DOCTYPE html> atau <html) di dalam partialText, upgrade wantsHtmlCode jadi true
+        // meski awalnya false, supaya tidak nyangkut jadi code block biasa di chat.
+        if (!wantsHtmlCode && /<!DOCTYPE\s+html|<html[\s>]/i.test(partialText)) {
+          wantsHtmlCode = true;
+        }
         if (wantsHtmlCode) {
           const code = extractHtmlCodeFromPartial(partialText);
           if (code !== null) {
