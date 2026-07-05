@@ -3273,32 +3273,26 @@ function buildFetchChipHtml(event){
   `</button></div>`;
 }
 
-// Susun teks jawaban akhir DENGAN chip permanen tool events (search/fetch) disisip TEPAT di
-// posisi (afterLength) masing-masing, bukan digabung semua di akhir. Setiap event dipotong sesuai
-// urutan munculnya di teks, supaya chip persis muncul setelah kalimat narasi yang mendahuluinya
-// (mis. "aku coba buka halamannya dulu ya" -> [chip Membaca halaman] -> lanjut jawaban).
+// Susun teks jawaban akhir: teksnya dirender UTUH duluan (tanpa dipotong-potong), lalu SEMUA chip
+// permanen tool events (search/fetch) dikumpulkan dan ditaruh di BAWAH/AKHIR jawaban, urut sesuai
+// kemunculannya — persis gaya Claude (chip sumber & chip halaman yang dibaca selalu di akhir jawaban,
+// bukan nyempil di tengah paragraf).
 function injectToolEventChips(rawText, toolEvents){
-  if (!toolEvents || !toolEvents.length) return formatText(rawText);
+  const textHtml = formatText(rawText);
+  if (!toolEvents || !toolEvents.length) return textHtml;
 
-  // Urutkan berdasarkan posisi supaya potongan teks diproses secara berurutan dari awal ke akhir.
+  // Urutkan berdasarkan posisi kemunculan aslinya di teks.
   const sorted = [...toolEvents].sort((a, b) => a.afterLength - b.afterLength);
 
-  let html = '';
-  let cursor = 0;
+  let chipsHtml = '';
   for (const event of sorted) {
-    const cutAt = Math.min(Math.max(event.afterLength, cursor), rawText.length);
-    const segment = rawText.slice(cursor, cutAt);
-    if (segment) html += formatText(segment);
     if (event.type === 'search') {
-      html += buildSourceChipsHtml(event.sources || []);
+      chipsHtml += buildSourceChipsHtml(event.sources || []);
     } else if (event.type === 'fetch') {
-      html += buildFetchChipHtml(event);
+      chipsHtml += buildFetchChipHtml(event);
     }
-    cursor = cutAt;
   }
-  const remaining = rawText.slice(cursor);
-  if (remaining) html += formatText(remaining);
-  return html;
+  return textHtml + chipsHtml;
 }
 
 // Tampilkan bottom sheet berisi daftar lengkap sumber untuk groupId tertentu.
