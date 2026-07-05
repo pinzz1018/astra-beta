@@ -1440,7 +1440,10 @@ Kamu punya tool yang bisa dipanggil:
    Untuk SEMUA kasus di atas: kamu WAJIB memanggil tool "edit_code" untuk mengubah HANYA bagian yang relevan, JANGAN menulis ulang seluruh file lewat code block, walaupun kamu yakin bisa menulis ulang versi yang lebih rapi/lebih baik dari nol — prioritas utama adalah TIDAK membuang perubahan/data yang sudah ada di file itu yang tidak berkaitan dengan masalah yang dilaporkan. Setiap edit berisi old_str (potongan kode PERSIS apa adanya dari kode aktif tadi, harus unik) dan new_str (penggantinya). Kamu boleh kirim beberapa edit sekaligus dalam satu panggilan. Kalau tool mengembalikan error (old_str tidak ketemu/ambigu), baca pesan errornya, perbaiki old_str (biasanya perlu konteks baris lebih banyak/lebih spesifik) lalu panggil ulang — JANGAN menyerah dan menulis ulang seluruh file hanya karena satu edit gagal di percobaan pertama. Tulis ulang SELURUH file lewat code block HANYA kalau pengguna memang eksplisit minta dibuatkan project/file BARU dari nol (bukan revisi/perbaikan file yang sudah ada), atau kalau perubahan yang diminta memang menyangkut sebagian besar/mayoritas struktur file.
    LANGKAH WAJIB SEBELUM BERTINDAK: setiap kali ada blok [KODE AKTIF] di pesan pengguna, sebelum kamu memanggil tool apapun (edit_code/search_docs/dsb) atau menulis kode, tentukan dulu secara eksplisit satu dari tiga kondisi ini berdasarkan isi pesan pengguna DAN sinyal jumlah giliran sejak kode terakhir disentuh (ada di dalam blok [KODE AKTIF]): (1) JELAS tentang aplikasi/kode aktif ini -> lanjut proses seperti aturan di atas; (2) JELAS bukan tentang aplikasi ini (topik lain) -> abaikan blok kode, jawab sesuai topik aslinya; (3) BENAR-BENAR AMBIGU (kamu tidak bisa menentukan dengan yakin dari kalimat + konteks yang ada) -> HANYA untuk kasus ini, jangan menebak dan jangan langsung bertindak ke kode — cukup tanyakan balik ke pengguna secara singkat dan ramah, misalnya "maksudnya soal aplikasi yang tadi dibuat, atau ini topik baru ya?", lalu tunggu jawabannya sebelum lanjut. Kondisi (3) ini pengecualian yang JARANG dipakai — kebanyakan kasus seharusnya sudah cukup jelas masuk (1) atau (2) dari konteksnya, jangan jadikan bertanya sebagai kebiasaan default.
 3. "web_search" (kalau tersedia) — untuk mencari informasi terkini/faktual di internet. HANYA panggil ini kalau pesan pengguna memang cocok untuk dicari di web: berita terbaru, harga/kurs, jadwal, statistik yang berubah-ubah, fakta terkini, atau apapun yang kamu tidak tahu pasti/berada di luar pengetahuanmu. Kamu sendiri yang menentukan kapan pertanyaan pengguna butuh pencarian web — jangan panggil untuk obrolan biasa, sapaan, opini, atau pertanyaan yang sudah bisa kamu jawab sendiri dengan yakin tanpa perlu data terbaru. Tool ini mungkin tidak selalu tersedia (tergantung pengaturan pengguna); kalau kamu tidak melihat tool ini di daftar tools, jangan mencoba memanggilnya, cukup jawab dengan pengetahuanmu sendiri.
-4. "web_fetch" — untuk mengambil ISI LENGKAP dari satu URL/link spesifik (bukan sekadar kata kunci pencarian). WAJIB dipanggil setiap kali pengguna menempelkan/menyebutkan sebuah link dan memintamu membaca, meringkas, menganalisis, atau menjawab pertanyaan berdasarkan isi link tersebut — JANGAN pernah berasumsi/menebak isi sebuah URL hanya dari nama domain atau potongan URL-nya, selalu ambil isi aslinya dulu lewat tool ini. Juga bisa dipanggil kalau kamu perlu membaca detail lengkap dari sebuah halaman yang muncul di hasil "web_search" (misalnya "sources" hasil pencarian) untuk menjawab pertanyaan yang butuh detail lebih dalam dari sekadar snippet ringkas. Kalau hasil tool ini berupa error (URL tidak valid/halaman blokir akses/rate limit), sampaikan ke pengguna secara jujur bahwa halamannya tidak bisa diakses, jangan mengarang isi halaman tersebut.
+4. "web_fetch" — untuk mengambil ISI LENGKAP dari satu URL/link spesifik (bukan sekadar kata kunci pencarian). WAJIB dipanggil setiap kali pengguna menempelkan/menyebutkan sebuah link dan memintamu membaca, meringkas, menganalisis, atau menjawab pertanyaan berdasarkan isi link tersebut — JANGAN pernah berasumsi/menebak isi sebuah URL hanya dari nama domain atau potongan URL-nya, selalu ambil isi aslinya dulu lewat tool ini.
+   RANTAI OTOMATIS dengan "web_search": setiap kali kamu memanggil "web_search" dan hasilnya berupa snippet/ringkasan yang TIDAK cukup detail untuk menjawab pertanyaan pengguna secara akurat (misalnya pengguna minta daftar lengkap, detail teknis spesifik, atau data yang snippet-nya cuma menyebut sepintas), kamu HARUS langsung lanjut memanggil "web_fetch" pada link paling relevan dari hasil "web_search" tadi — dalam giliran/respons yang SAMA, TANPA menunggu pengguna memintanya lagi secara terpisah. Ini berlaku otomatis untuk pertanyaan seperti "apa yang paling bagus/terbaru/lengkap di [suatu situs]" — jangan puas hanya dengan snippet kalau kamu merasa detailnya kurang untuk menjawab dengan akurat.
+   BERI TAHU PENGGUNA SEBELUM FETCH: setiap kali kamu MEMUTUSKAN untuk memanggil "web_fetch" (baik karena diminta eksplisit maupun inisiatifmu sendiri lanjutan dari web_search), tulis dulu satu kalimat singkat & natural ke pengguna sebelum memanggil tool-nya, misalnya "biar lebih akurat, aku coba buka langsung halaman [nama situs/topik] dulu ya" atau "aku baca dulu isi lengkap halamannya biar datanya pasti terbaru" — supaya pengguna tahu kamu sedang mengambil langkah ekstra, bukan cuma menebak. Kebalikannya: kalau kamu TIDAK memanggil web_fetch (misalnya karena hasil web_search sudah cukup), JANGAN menyebut-nyebut soal fetch/membaca halaman sama sekali — cukup jawab langsung seperti biasa tanpa narasi tambahan apapun.
+   Juga bisa dipanggil kalau kamu perlu membaca detail lengkap dari sebuah halaman yang muncul di hasil "web_search" (misalnya "sources" hasil pencarian) untuk menjawab pertanyaan yang butuh detail lebih dalam dari sekadar snippet ringkas. Kalau hasil tool ini berupa error (URL tidak valid/halaman blokir akses/rate limit), sampaikan ke pengguna secara jujur bahwa halamannya tidak bisa diakses, jangan mengarang isi halaman tersebut.
 4. "animate_image" — untuk mengubah foto/gambar yang BARU SAJA diunggah pengguna di percakapan ini menjadi video pendek dengan efek Ken Burns (zoom & pan sinematik halus). Panggil ini HANYA ketika pengguna secara eksplisit minta gambarnya dianimasikan/dijadikan video/digerakkan/dibikin hidup (contoh: "animasikan foto ini", "jadiin video dong gambarnya", "bikin gambar ini bergerak"). Tool ini otomatis memakai gambar terakhir yang diunggah pengguna di percakapan — kalau belum ada gambar yang diunggah sama sekali di percakapan ini, JANGAN panggil tool ini, cukup beri tahu pengguna untuk mengunggah foto dulu lewat tombol lampiran. Setelah tool ini selesai dan berhasil, cukup beri respons singkat yang ramah (video hasilnya akan otomatis ditampilkan oleh aplikasi, jadi jangan menjelaskan ulang secara teknis atau berlebihan).
 5. "replace_background" — untuk mengganti atau menghapus BACKGROUND foto yang BARU SAJA diunggah pengguna (khusus urusan latar belakang saja, bukan mengedit subjek/orangnya). Panggil ini untuk permintaan seperti: "hapus background", "ganti background jadi pantai/Jepang/hitam/putih/dsb", "buang latar belakangnya", "background-nya diganti jadi...". Tool ini pakai remove.bg (gratis, bukan Gemini), jauh lebih hemat kuota dibanding "edit_image", jadi SELALU utamakan tool ini kalau permintaannya murni soal ganti/hapus background. Kalau pengguna menyebut tempat/tema tertentu untuk background barunya (misal "Jepang", "pantai", "luar angkasa"), isi parameter "background_theme_prompt" dengan deskripsi singkat dalam Bahasa Inggris tentang pemandangan/tema itu (contoh: "Mount Fuji Japan scenery with cherry blossoms", "tropical beach sunset") — JANGAN pernah mengisi dengan URL gambar sungguhan, karena background akan digenerate otomatis oleh sistem dari deskripsi itu (bukan kamu yang mencari URL). Kalau pengguna cuma minta "hapus background" tanpa sebutkan tema baru, biarkan parameter ini kosong (background akan jadi transparan). Tool ini otomatis memakai gambar terakhir yang diunggah pengguna — kalau belum ada gambar sama sekali di percakapan ini, JANGAN panggil, cukup minta pengguna upload foto dulu. Tool ini bisa gagal karena kuota bulanan gratis remove.bg habis (50x/bulan) — kalau itu terjadi, sampaikan ke pengguna dengan jujur dan ramah bahwa kuota bulan ini sudah habis dan akan reset bulan depan. Setelah berhasil, cukup beri respons singkat yang ramah (gambar hasilnya otomatis ditampilkan oleh aplikasi).
 6. "edit_image" — untuk mengedit ISI/KONTEN foto yang BARU SAJA diunggah pengguna memakai instruksi bahasa natural, SELAIN urusan background (hapus objek/orang, ubah warna baju, ubah jadi gaya tertentu, colorize foto hitam-putih, dsb). JANGAN pakai tool ini untuk permintaan ganti/hapus background — untuk itu pakai "replace_background" karena lebih hemat kuota. Panggil "edit_image" ketika pengguna minta mengubah isi gambarnya dengan kalimat perintah selain background (contoh: "hilangkan orang di belakang", "ubah jadi anime", "ganti warna baju jadi merah"). Tulis parameter "instruction" dalam Bahasa Inggris yang jelas dan spesifik berdasarkan permintaan pengguna, supaya hasil editnya lebih akurat. JANGAN panggil untuk permintaan animasi/video (itu tugas "animate_image"). Tool ini otomatis memakai gambar terakhir yang diunggah pengguna — kalau belum ada gambar sama sekali di percakapan ini, JANGAN panggil, cukup minta pengguna upload foto dulu. Tool ini bisa gagal karena kuota/limit harian model edit gambar habis — kalau itu terjadi, sampaikan ke pengguna dengan jujur dan ramah bahwa kuota edit gambar sedang habis dan bisa dicoba lagi nanti/besok, jangan berpura-pura berhasil. Setelah berhasil, cukup beri respons singkat yang ramah (gambar hasilnya otomatis ditampilkan oleh aplikasi).
@@ -1478,7 +1481,7 @@ Tool yang bisa dipanggil:
 - "run_code": jalankan/uji kode JavaScript sebelum disajikan, untuk kode JS yang cukup rumit (logika, collision detection, perhitungan posisi).
 - "edit_code": WAJIB dipakai (bukan tulis ulang seluruh file) kalau pesan pengguna berisi blok "[KODE AKTIF SAAT INI DI PANEL ARTEFAK PENGGUNA ...]" DAN pesannya berupa: (a) instruksi revisi/tambahan/perbaikan ("tambahin fitur X", "ubah warna Y", "perbaiki bug Z"), ATAU (b) LAPORAN BUG/KELUHAN yang JELAS merujuk ke elemen/fitur aplikasi yang sedang aktif itu (bukan topik lain) — misal "kenapa tombol ini gak jalan", "kok sidebar gak muncul", "ini error pas dibuka". JANGAN anggap laporan bug kalau topik pesannya jelas tidak berhubungan dengan aplikasi/kode aktif (misal sedang bahas hal lain lalu bilang "kok ini gak muncul") — untuk itu jawab sesuai konteks aslinya, abaikan blok [KODE AKTIF]. Kalau memang laporan bug yang relevan: cari akar masalahnya di kode aktif lalu langsung edit_code, JANGAN nulis ulang seluruh file walau merasa bisa bikin versi lebih rapi dari nol. Kirim old_str (potongan PERSIS dari kode aktif, harus unik) + new_str per perubahan, boleh beberapa sekaligus. Kalau error (old_str tidak ketemu/ambigu), perbaiki old_str lalu panggil ulang, jangan langsung nulis ulang semua. Tulis ulang penuh via code block HANYA kalau memang diminta buat project/file BARU dari nol. SEBELUM bertindak, tentukan dulu: apakah pesan pengguna JELAS soal aplikasi ini, JELAS topik lain (abaikan blok kode), atau BENAR-BENAR AMBIGU — kalau ambigu (jarang terjadi), tanya balik singkat ke pengguna dulu ("maksudnya soal aplikasi tadi atau topik baru?") sebelum bertindak, jangan menebak.
 - "web_search" (kalau tersedia): cari info terkini/faktual di web. Hanya panggil kalau memang butuh data terbaru (berita, harga, jadwal, dsb), jangan untuk obrolan biasa. Hasilnya sudah terverifikasi & mempertimbangkan tanggal hari ini — percayai sepenuhnya, jangan sebut "hoaks"/"di masa depan". Jangan tulis daftar sumber manual di jawabanmu, itu ditampilkan otomatis oleh aplikasi.
-- "web_fetch": ambil ISI LENGKAP dari satu URL spesifik yang disebut/ditempel pengguna. WAJIB dipanggil kalau pengguna kasih link dan minta dibaca/diringkas/dianalisis — JANGAN menebak isi URL dari nama domainnya saja. Kalau errornya URL invalid/blokir/rate limit, bilang jujur ke pengguna, jangan mengarang isinya.
+- "web_fetch": ambil ISI LENGKAP dari satu URL spesifik yang disebut/ditempel pengguna. WAJIB dipanggil kalau pengguna kasih link dan minta dibaca/diringkas/dianalisis — JANGAN menebak isi URL dari nama domainnya saja. RANTAI OTOMATIS: kalau habis "web_search" hasilnya cuma snippet dan kurang detail buat jawab akurat (misal pengguna minta "yang paling bagus/lengkap di situs X"), langsung lanjut "web_fetch" ke link paling relevan dari hasil search itu di respons yang SAMA, jangan tunggu diminta lagi. Sebelum memanggil web_fetch, tulis dulu 1 kalimat singkat ke pengguna kayak "aku buka dulu halamannya biar lebih akurat" — tapi kalau ternyata TIDAK jadi fetch (search sudah cukup), jangan sebut-sebut soal fetch sama sekali. Kalau errornya URL invalid/blokir/rate limit, bilang jujur ke pengguna, jangan mengarang isinya.
 
 Khusus game/app <canvas>: sebelum kirim kode final, bayangkan membuka file itu di browser — pastikan ada draw/render pertama saat load (bukan menunggu tombol ditekan), canvas.width/height diset via JS (bukan cuma CSS), dan game loop memanggil dirinya sendiri lagi tiap iterasi. Kalau ragu salah satu poin ini, perbaiki dulu sebelum kirim — ini penyebab paling umum canvas tampil kosong/blank.
 
@@ -3063,9 +3066,12 @@ async function openChat(id){
     snap.forEach(doc => {
       const m = doc.data();
       const images = m.images || [];
-      const searchGroups = m.searchGroups || null;
-      messages.push({ role: m.role, text: m.text, images, searchGroups });
-      renderMessage(m.role, m.text, images, false, false, searchGroups);
+      // toolEvents adalah field baru (chip permanen search/fetch); searchGroups adalah field LAMA
+      // dari sebelum fitur ini ada — tetap dibaca untuk backward-compat pesan lama yang sudah
+      // tersimpan duluan, dikonversi ke bentuk toolEvents (type: 'search') supaya tetap tampil.
+      const toolEvents = m.toolEvents || (m.searchGroups ? m.searchGroups.map(g => ({ type: 'search', query: g.query, sources: g.sources, afterLength: g.afterLength })) : null);
+      messages.push({ role: m.role, text: m.text, images, toolEvents });
+      renderMessage(m.role, m.text, images, false, false, toolEvents);
       // Cari code block ```html ... ``` terakhir di pesan model sepanjang riwayat chat ini,
       // supaya lastRunCode terisi lagi setelah reload/pindah chat — tanpa ini, fitur edit_code
       // tidak akan bisa jalan sama sekali untuk chat yang dibuka ulang (Astra akan menganggap
@@ -3124,14 +3130,14 @@ async function ensureChatDoc(firstUserMessage){
   return currentChatId;
 }
 
-async function saveMessage(role, text, images = [], searchGroups = null){
+async function saveMessage(role, text, images = [], toolEvents = null){
   if (!currentChatId) return;
   const payload = {
     role, text,
     createdAt: firebase.firestore.FieldValue.serverTimestamp()
   };
   if (images && images.length) payload.images = images;
-  if (searchGroups && searchGroups.length) payload.searchGroups = searchGroups;
+  if (toolEvents && toolEvents.length) payload.toolEvents = toolEvents;
   await chatsRef().doc(currentChatId).collection('messages').add(payload);
   await chatsRef().doc(currentChatId).update({
     updatedAt: firebase.firestore.FieldValue.serverTimestamp()
@@ -3247,6 +3253,54 @@ function buildSourceChipsHtml(sources){
   `</button></div>`;
 }
 
+// Chip PERMANEN untuk 1 panggilan web_fetch — beda dari chip sumber web_search (yang buka bottom
+// sheet berisi banyak link), ini cukup 1 link langsung, diberi label host-nya + ikon status
+// sukses/gagal. Diklik akan membuka URL aslinya di tab baru (kalau sukses).
+function buildFetchChipHtml(event){
+  const host = event.url ? shortDomainLabel(event.url) : '';
+  const label = event.ok
+    ? (getLang() === 'id' ? 'Membaca halaman' : 'Read page')
+    : (getLang() === 'id' ? 'Gagal membaca halaman' : 'Failed to read page');
+  const favicon = event.url ? `https://www.google.com/s2/favicons?domain=${encodeURIComponent(host)}&sz=32` : '';
+  const faviconHtml = event.ok && favicon
+    ? `<span class="chip-favicon"><img src="${favicon}" alt="" loading="lazy" onerror="this.parentElement.style.display='none'"></span>`
+    : '';
+  const clickAttr = event.ok && event.url ? ` onclick="window.open('${event.url.replace(/'/g, "\\'")}', '_blank')"` : '';
+  const cursorStyle = event.ok && event.url ? '' : ' style="cursor:default;opacity:.7;"';
+  return `<div class="source-chips-row"><button type="button" class="source-btn"${clickAttr}${cursorStyle}>` +
+    `<span>${label}${host ? ': ' + host : ''}</span>` +
+    faviconHtml +
+  `</button></div>`;
+}
+
+// Susun teks jawaban akhir DENGAN chip permanen tool events (search/fetch) disisip TEPAT di
+// posisi (afterLength) masing-masing, bukan digabung semua di akhir. Setiap event dipotong sesuai
+// urutan munculnya di teks, supaya chip persis muncul setelah kalimat narasi yang mendahuluinya
+// (mis. "aku coba buka halamannya dulu ya" -> [chip Membaca halaman] -> lanjut jawaban).
+function injectToolEventChips(rawText, toolEvents){
+  if (!toolEvents || !toolEvents.length) return formatText(rawText);
+
+  // Urutkan berdasarkan posisi supaya potongan teks diproses secara berurutan dari awal ke akhir.
+  const sorted = [...toolEvents].sort((a, b) => a.afterLength - b.afterLength);
+
+  let html = '';
+  let cursor = 0;
+  for (const event of sorted) {
+    const cutAt = Math.min(Math.max(event.afterLength, cursor), rawText.length);
+    const segment = rawText.slice(cursor, cutAt);
+    if (segment) html += formatText(segment);
+    if (event.type === 'search') {
+      html += buildSourceChipsHtml(event.sources || []);
+    } else if (event.type === 'fetch') {
+      html += buildFetchChipHtml(event);
+    }
+    cursor = cutAt;
+  }
+  const remaining = rawText.slice(cursor);
+  if (remaining) html += formatText(remaining);
+  return html;
+}
+
 // Tampilkan bottom sheet berisi daftar lengkap sumber untuk groupId tertentu.
 // Bagian atas berjudul "Kutipan"/"Citation" dengan sumber utama (yang pertama dipakai),
 // diikuti "Sumber lainnya"/"Other sources" untuk sisanya — meniru tata letak referensi.
@@ -3292,14 +3346,6 @@ function closeSourcesSheet(){
 // Sisipkan blok chip sumber ke dalam teks jawaban (versi HTML sudah diformat). Semua sumber
 // dari seluruh pemanggilan web_search dalam jawaban ini digabung jadi SATU tombol "Sumber" di akhir
 // jawaban (dedup per domain) — gaya ringkas seperti Claude, bukan satu blok besar per pencarian.
-function injectSourceChips(rawText, searchGroups){
-  const bodyHtml = formatText(rawText);
-  if (!searchGroups || !searchGroups.length) return bodyHtml;
-
-  const allSources = searchGroups.flatMap(g => g.sources || []);
-  const chipsHtml = buildSourceChipsHtml(allSources);
-  return bodyHtml + chipsHtml;
-}
 
 // Indikator "Mencari di web" / "Membaca halaman" dengan efek shimmer — tampilan beda dari reading-indicator.
 // mode: 'search' (default, ikon kaca pembesar) atau 'fetch' (ikon dokumen/link, dipakai saat web_fetch berjalan).
@@ -3330,7 +3376,7 @@ function hideSearchIndicator(row){
   if (el) el.remove();
 }
 
-function renderMessage(role, text, images = [], animate = true, showReadingIndicator = false, searchGroups = null){
+function renderMessage(role, text, images = [], animate = true, showReadingIndicator = false, toolEvents = null){
   welcomeEl.style.display = 'none';
   messagesEl.style.display = 'block';
 
@@ -3340,7 +3386,7 @@ function renderMessage(role, text, images = [], animate = true, showReadingIndic
   const imagesHtml = images && images.length
     ? `<div class="msg-images">${images.map(src => `<img src="${src}" class="msg-image">`).join('')}</div>`
     : '';
-  const textHtml = text ? (searchGroups && searchGroups.length ? injectSourceChips(text, searchGroups) : formatText(text)) : '';
+  const textHtml = text ? (toolEvents && toolEvents.length ? injectToolEventChips(text, toolEvents) : formatText(text)) : '';
   const readingHtml = showReadingIndicator ? READING_INDICATOR_HTML : '';
 
   if (role === 'user') {
@@ -4610,8 +4656,9 @@ async function executeTool(name, args){
 async function askAstraStream(history, onChunk, onStatus){
   // history: array of {role: 'user'|'model', text, images?: base64 data URLs}
   // onStatus(name|null): dipanggil dengan nama tool saat mulai dieksekusi, dan null saat selesai/tidak ada tool.
-  // Return: { text, searchGroups } — searchGroups adalah daftar hasil web_search (query + sources + posisi teks)
-  // dipakai untuk merender chip link sumber tepat setelah bagian jawaban yang relevan (mirip ChatGPT).
+  // Return: { text, toolEvents } — toolEvents adalah daftar SEMUA aksi search/fetch yang benar-benar
+  // terjadi (query/url + posisi teks), dipakai untuk merender chip PERMANEN tepat setelah bagian
+  // jawaban yang relevan (chip tidak pernah dihapus, beda dari indikator loading sementara di UI).
   const MAX_HISTORY_MESSAGES = 7; // batasi jumlah pesan lama yang dikirim ulang ke API
   const trimmedHistory = history.slice(-MAX_HISTORY_MESSAGES);
   const contents = trimmedHistory.map(m => {
@@ -4660,7 +4707,11 @@ async function askAstraStream(history, onChunk, onStatus){
 
   const MAX_TOOL_ROUNDS = 10;
   let combinedText = '';
-  const searchGroups = [];
+  // toolEvents: daftar SEMUA aksi tool yang benar-benar terjadi (search & fetch), beserta posisi
+  // teks (afterLength) tempat chip permanennya harus disisipkan nanti saat render. Chip ini TIDAK
+  // pernah dihapus setelah selesai (beda dari indikator loading sementara di UI) — ini catatan
+  // riwayat aksi yang tetap ditampilkan ke pengguna, dan juga disimpan ke Firestore.
+  const toolEvents = [];
 
   for (let round = 0; round < MAX_TOOL_ROUNDS; round++){
     const { fullText, functionCalls } = await streamOneTurn(contents, (partial) => {
@@ -4671,7 +4722,7 @@ async function askAstraStream(history, onChunk, onStatus){
 
     if (!functionCalls.length) {
       if (!combinedText) throw new Error('Respons kosong dari Astra.');
-      return { text: combinedText, searchGroups };
+      return { text: combinedText, toolEvents };
     }
 
     // Gemini minta panggil tool: tambahkan giliran model (berisi functionCall) ke contents,
@@ -4702,18 +4753,32 @@ async function askAstraStream(history, onChunk, onStatus){
           _groqId: fc._groqId // dipakai jalur Groq untuk memetakan tool_call_id ke message role "tool"
         }
       });
-      // Catat sumber tiap panggilan web_search, beserta posisi (panjang teks sejauh ini)
-      // supaya chip link bisa disisipkan tepat setelah paragraf jawaban terkait pencarian ini.
+      // Catat SETIAP panggilan web_search & web_fetch sebagai toolEvent permanen, beserta posisi
+      // (panjang teks SEBELUM tool ini dijalankan) supaya chip bisa disisipkan tepat setelah
+      // kalimat narasi yang ditulis model sebelum memanggil tool ini (bukan selalu di akhir/awal).
       if (fc.name === 'web_search') {
         try {
           const parsed = JSON.parse(result);
           if (parsed && Array.isArray(parsed.sources) && parsed.sources.length) {
-            searchGroups.push({
+            toolEvents.push({
+              type: 'search',
               query: fc.args?.query || '',
               sources: parsed.sources,
               afterLength: combinedText.length
             });
           }
+        } catch (e) { /* abaikan kalau result bukan JSON valid */ }
+      } else if (fc.name === 'web_fetch') {
+        try {
+          const parsed = JSON.parse(result);
+          // Catat toolEvent fetch baik sukses maupun gagal, supaya pengguna tetap lihat jejak
+          // bahwa Astra SEMPAT mencoba membaca halaman itu (jujur, bukan menyembunyikan kegagalan).
+          toolEvents.push({
+            type: 'fetch',
+            url: fc.args?.url || (parsed && parsed.url) || '',
+            ok: !(parsed && parsed.error),
+            afterLength: combinedText.length
+          });
         } catch (e) { /* abaikan kalau result bukan JSON valid */ }
       }
     }
@@ -4723,7 +4788,7 @@ async function askAstraStream(history, onChunk, onStatus){
   }
 
   if (!combinedText) throw new Error('Astra tidak memberikan jawaban akhir setelah memanggil tool.');
-  return { text: combinedText, searchGroups };
+  return { text: combinedText, toolEvents };
 }
 
 /* =========================================================
@@ -4787,13 +4852,13 @@ function createTypewriter(bubbleEl){
       if (!rafId) rafId = requestAnimationFrame(tick);
     },
     // Menunggu animasi mengetik benar-benar selesai menampilkan seluruh targetText,
-    // alih-alih langsung memotong ke teks penuh. searchGroups (opsional) dipakai untuk
-    // menyisipkan chip link sumber tepat setelah bagian jawaban yang terkait.
-    finish(searchGroups){
+    // alih-alih langsung memotong ke teks penuh. toolEvents (opsional) dipakai untuk
+    // menyisipkan chip permanen (search/fetch) tepat di posisi masing-masing dalam teks.
+    finish(toolEvents){
       return new Promise((resolve) => {
         const renderFinal = () => {
-          bubbleEl.innerHTML = searchGroups && searchGroups.length
-            ? injectSourceChips(targetText, searchGroups)
+          bubbleEl.innerHTML = toolEvents && toolEvents.length
+            ? injectToolEventChips(targetText, toolEvents)
             : formatText(targetText);
           setupCodeBlockAutoScroll();
           applyCodeBlockAutoScroll();
@@ -4895,7 +4960,7 @@ async function handleSend(){
       return artifactChip;
     }
 
-    const { text: reply, searchGroups } = await askAstraStream(
+    const { text: reply, toolEvents } = await askAstraStream(
       messages,
       (partialText) => {
         if (!streamRow) {
@@ -5006,16 +5071,16 @@ async function handleSend(){
       turnsSinceLastCodeTouch++;
     }
 
-    // Sisipkan chip link sumber (kalau ada web_search) tepat setelah bagian jawaban yang terkait.
+    // Sisipkan chip PERMANEN search/fetch tepat setelah bagian jawaban yang terkait.
     // Untuk mode artefak, teks final yang ditampilkan juga harus tetap tanpa code block mentahnya.
     const finalReplyForChat = wantsHtmlCode ? stripHtmlCodeBlockForChat(reply) : reply;
     if (typewriter) {
       typewriter.setTarget(finalReplyForChat);
-      await typewriter.finish(searchGroups);
+      await typewriter.finish(toolEvents);
     }
     window.__astraCurrentAnimateContainer = null;
-    messages.push({ role: 'model', text: reply, searchGroups });
-    saveMessage('model', reply, [], searchGroups).catch(e => console.error(e));
+    messages.push({ role: 'model', text: reply, toolEvents });
+    saveMessage('model', reply, [], toolEvents).catch(e => console.error(e));
   } catch (e) {
     removeTyping();
     if (e.noKey) {
