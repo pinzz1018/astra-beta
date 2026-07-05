@@ -3283,26 +3283,33 @@ function buildFetchChipHtml(event){
   `</button></div>`;
 }
 
-// Susun teks jawaban akhir: teksnya dirender UTUH duluan (tanpa dipotong-potong), lalu SEMUA chip
-// permanen tool events (search/fetch) dikumpulkan dan ditaruh di BAWAH/AKHIR jawaban, urut sesuai
-// kemunculannya — persis gaya Claude (chip sumber & chip halaman yang dibaca selalu di akhir jawaban,
-// bukan nyempil di tengah paragraf).
+// Susun teks jawaban akhir DENGAN chip permanen tool events (search/fetch) disisip TEPAT di
+// posisi (afterLength) masing-masing, bukan digabung semua di akhir. Setiap event dipotong sesuai
+// urutan munculnya di teks, supaya chip persis muncul setelah kalimat narasi yang mendahuluinya
+// (mis. "aku coba buka halamannya dulu ya." -> [chip Membaca halaman] -> lanjut jawaban), dan
+// posisinya TIDAK PERNAH berubah lagi setelah itu (persis gaya Claude).
 function injectToolEventChips(rawText, toolEvents){
-  const textHtml = formatText(rawText);
-  if (!toolEvents || !toolEvents.length) return textHtml;
+  if (!toolEvents || !toolEvents.length) return formatText(rawText);
 
-  // Urutkan berdasarkan posisi kemunculan aslinya di teks.
+  // Urutkan berdasarkan posisi supaya potongan teks diproses secara berurutan dari awal ke akhir.
   const sorted = [...toolEvents].sort((a, b) => a.afterLength - b.afterLength);
 
-  let chipsHtml = '';
+  let html = '';
+  let cursor = 0;
   for (const event of sorted) {
+    const cutAt = Math.min(Math.max(event.afterLength, cursor), rawText.length);
+    const segment = rawText.slice(cursor, cutAt);
+    if (segment) html += formatText(segment);
     if (event.type === 'search') {
-      chipsHtml += buildSourceChipsHtml(event.sources || []);
+      html += buildSourceChipsHtml(event.sources || []);
     } else if (event.type === 'fetch') {
-      chipsHtml += buildFetchChipHtml(event);
+      html += buildFetchChipHtml(event);
     }
+    cursor = cutAt;
   }
-  return textHtml + chipsHtml;
+  const remaining = rawText.slice(cursor);
+  if (remaining) html += formatText(remaining);
+  return html;
 }
 
 // Tampilkan bottom sheet berisi daftar lengkap sumber untuk groupId tertentu.
@@ -3366,30 +3373,28 @@ function buildSearchIndicatorHtml(mode = 'search'){
   return `<div class="search-indicator" data-search-indicator="active"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">${icon}</svg><span class="shimmer-text">${label}</span></div>`;
 }
 
-// Tampilkan indikator pencarian web di dalam bubble-col milik row pesan model tertentu.
-// Setiap panggilan (search atau fetch) SELALU jadi chip BARU yang ditambahkan (bukan
-// menimpa/mengganti chip sebelumnya) — supaya kalau ada beberapa tool call berturut-turut,
-// semua chip-nya tetap kelihatan berjajar, tidak ada yang hilang atau tertimpa.
+// Tampilkan indikator pencarian web SEMENTARA (loading, shimmer) di dalam bubble-col milik row
+// pesan model tertentu. Ini murni indikator "lagi proses" — begitu tool-nya selesai / Astra
+// mulai menjawab, chip ini dihapus (lihat hideSearchIndicator) dan posisi PERMANENnya muncul
+// tepat di tengah teks jawaban lewat injectToolEventChips.
 function showSearchIndicator(row, mode = 'search'){
   if (!row) return;
   const col = row.querySelector('.bubble-col');
   if (!col) return;
-  // Bekukan dulu indikator aktif sebelumnya (kalau ada & masih "active") sebelum menambah yang baru,
-  // supaya tidak ada 2 chip yang keduanya masih shimmer bersamaan.
-  const stillActive = col.querySelector('[data-search-indicator="active"]');
-  if (stillActive) stillActive.classList.add('done');
+  // Hapus dulu indikator lama (kalau ada, dari tool sebelumnya di round yang sama) sebelum
+  // menambah yang baru, supaya tidak ada 2 chip shimmer bersamaan.
+  col.querySelectorAll('[data-search-indicator]').forEach(el => el.remove());
   col.insertAdjacentHTML('afterbegin', buildSearchIndicatorHtml(mode));
   scrollToBottom();
 }
 
-// Bekukan (BUKAN hapus) semua indikator yang masih aktif di row ini — dipanggil begitu tool
-// selesai / Astra mulai menjawab. Chip tetap tampil permanen di layar, cuma animasinya berhenti.
+// Sembunyikan/hapus indikator pencarian web SEMENTARA (dipanggil begitu tool selesai / Astra mulai
+// menjawab). Chip ini cuma indikator loading live — begitu hilang, posisi PERMANENnya sudah
+// tergantikan oleh chip yang disisip tepat di tengah teks jawaban (lihat injectToolEventChips),
+// jadi tidak perlu dibekukan di sini, cukup dihapus supaya tidak dobel dengan chip permanen itu.
 function hideSearchIndicator(row){
   if (!row) return;
-  row.querySelectorAll('[data-search-indicator="active"]').forEach(el => {
-    el.classList.add('done');
-    el.setAttribute('data-search-indicator', 'done');
-  });
+  row.querySelectorAll('[data-search-indicator]').forEach(el => el.remove());
 }
 
 function renderMessage(role, text, images = [], animate = true, showReadingIndicator = false, toolEvents = null){
@@ -3404,15 +3409,6 @@ function renderMessage(role, text, images = [], animate = true, showReadingIndic
     : '';
   const textHtml = text ? (toolEvents && toolEvents.length ? injectToolEventChips(text, toolEvents) : formatText(text)) : '';
   const readingHtml = showReadingIndicator ? READING_INDICATOR_HTML : '';
-  // Rekonstruksi chip indikator "Mencari di web"/"Membaca halaman" dalam keadaan BEKU (done) dari
-  // riwayat toolEvents, supaya tetap tampil permanen walau chat di-reload/refresh — bukan cuma
-  // muncul sekali pas live streaming lalu hilang begitu direfresh.
-  const frozenIndicatorsHtml = (toolEvents && toolEvents.length)
-    ? toolEvents
-        .filter(ev => ev.type === 'search' || ev.type === 'fetch')
-        .map(ev => buildSearchIndicatorHtml(ev.type === 'fetch' ? 'fetch' : 'search').replace('class="search-indicator"', 'class="search-indicator done"').replace('data-search-indicator="active"', 'data-search-indicator="done"'))
-        .join('')
-    : '';
 
   if (role === 'user') {
     row.innerHTML = `<div class="bubble-col"><div class="bubble">${imagesHtml}${textHtml}</div></div><div class="avatar me">${(currentUser?.displayName || '?')[0].toUpperCase()}</div>`;
@@ -3420,7 +3416,7 @@ function renderMessage(role, text, images = [], animate = true, showReadingIndic
     // "animate-slot" adalah kontainer terpisah dari .bubble (yang isinya sering di-overwrite penuh
     // oleh efek typewriter) — supaya kartu progress/video hasil animate_image tidak pernah terhapus
     // di tengah proses streaming teks jawaban.
-    row.innerHTML = `<div class="avatar ai">A</div><div class="bubble-col">${readingHtml}${frozenIndicatorsHtml}<div class="animate-slot"></div><div class="bubble">${imagesHtml}${textHtml}</div></div>`;
+    row.innerHTML = `<div class="avatar ai">A</div><div class="bubble-col">${readingHtml}<div class="animate-slot"></div><div class="bubble">${imagesHtml}${textHtml}</div></div>`;
   }
   messagesEl.appendChild(row);
   scrollToBottom();
