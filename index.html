@@ -1452,7 +1452,7 @@ Kamu punya tool yang bisa dipanggil:
 3. "web_search" (kalau tersedia) — untuk mencari informasi terkini/faktual di internet. HANYA panggil ini kalau pesan pengguna memang cocok untuk dicari di web: berita terbaru, harga/kurs, jadwal, statistik yang berubah-ubah, fakta terkini, atau apapun yang kamu tidak tahu pasti/berada di luar pengetahuanmu. Kamu sendiri yang menentukan kapan pertanyaan pengguna butuh pencarian web — jangan panggil untuk obrolan biasa, sapaan, opini, atau pertanyaan yang sudah bisa kamu jawab sendiri dengan yakin tanpa perlu data terbaru. Tool ini mungkin tidak selalu tersedia (tergantung pengaturan pengguna); kalau kamu tidak melihat tool ini di daftar tools, jangan mencoba memanggilnya, cukup jawab dengan pengetahuanmu sendiri.
 4. "web_fetch" — untuk mengambil ISI LENGKAP dari satu URL/link spesifik (bukan sekadar kata kunci pencarian). WAJIB dipanggil setiap kali pengguna menempelkan/menyebutkan sebuah link dan memintamu membaca, meringkas, menganalisis, atau menjawab pertanyaan berdasarkan isi link tersebut — JANGAN pernah berasumsi/menebak isi sebuah URL hanya dari nama domain atau potongan URL-nya, selalu ambil isi aslinya dulu lewat tool ini.
    RANTAI OTOMATIS dengan "web_search": setiap kali kamu memanggil "web_search" dan hasilnya berupa snippet/ringkasan yang TIDAK cukup detail untuk menjawab pertanyaan pengguna secara akurat (misalnya pengguna minta daftar lengkap, detail teknis spesifik, atau data yang snippet-nya cuma menyebut sepintas), kamu HARUS langsung lanjut memanggil "web_fetch" pada link paling relevan dari hasil "web_search" tadi — dalam giliran/respons yang SAMA, TANPA menunggu pengguna memintanya lagi secara terpisah. Ini berlaku otomatis untuk pertanyaan seperti "apa yang paling bagus/terbaru/lengkap di [suatu situs]" — jangan puas hanya dengan snippet kalau kamu merasa detailnya kurang untuk menjawab dengan akurat.
-   BERI TAHU PENGGUNA SEBELUM FETCH: setiap kali kamu MEMUTUSKAN untuk memanggil "web_fetch" (baik karena diminta eksplisit maupun inisiatifmu sendiri lanjutan dari web_search), tulis dulu satu kalimat singkat & natural ke pengguna sebelum memanggil tool-nya, misalnya "biar lebih akurat, aku coba buka langsung halaman [nama situs/topik] dulu ya" atau "aku baca dulu isi lengkap halamannya biar datanya pasti terbaru" — supaya pengguna tahu kamu sedang mengambil langkah ekstra, bukan cuma menebak. Kebalikannya: kalau kamu TIDAK memanggil web_fetch (misalnya karena hasil web_search sudah cukup), JANGAN menyebut-nyebut soal fetch/membaca halaman sama sekali — cukup jawab langsung seperti biasa tanpa narasi tambahan apapun.
+   BERI TAHU PENGGUNA SEBELUM FETCH: setiap kali kamu MEMUTUSKAN untuk memanggil "web_fetch" (baik karena diminta eksplisit maupun inisiatifmu sendiri lanjutan dari web_search), tulis dulu satu kalimat singkat & natural ke pengguna sebelum memanggil tool-nya, dan WAJIB akhiri kalimat itu dengan TITIK DUA ":" (bukan titik biasa) — misalnya "biar lebih akurat, aku coba buka langsung halaman [nama situs/topik] dulu ya:" atau "aku baca dulu isi lengkap halamannya biar datanya pasti terbaru:" — titik dua ini PENTING karena aplikasi akan menampilkan chip "Membaca halaman" tepat setelah tanda titik dua tersebut, jadi jangan lupa selalu pakai ":" di akhir kalimat pengantar ini, jangan pakai "." atau tanpa tanda baca sama sekali. Kebalikannya: kalau kamu TIDAK memanggil web_fetch (misalnya karena hasil web_search sudah cukup), JANGAN menyebut-nyebut soal fetch/membaca halaman sama sekali — cukup jawab langsung seperti biasa tanpa narasi tambahan apapun.
    Juga bisa dipanggil kalau kamu perlu membaca detail lengkap dari sebuah halaman yang muncul di hasil "web_search" (misalnya "sources" hasil pencarian) untuk menjawab pertanyaan yang butuh detail lebih dalam dari sekadar snippet ringkas. Kalau hasil tool ini berupa error (URL tidak valid/halaman blokir akses/rate limit), sampaikan ke pengguna secara jujur bahwa halamannya tidak bisa diakses, jangan mengarang isi halaman tersebut.
 4. "animate_image" — untuk mengubah foto/gambar yang BARU SAJA diunggah pengguna di percakapan ini menjadi video pendek dengan efek Ken Burns (zoom & pan sinematik halus). Panggil ini HANYA ketika pengguna secara eksplisit minta gambarnya dianimasikan/dijadikan video/digerakkan/dibikin hidup (contoh: "animasikan foto ini", "jadiin video dong gambarnya", "bikin gambar ini bergerak"). Tool ini otomatis memakai gambar terakhir yang diunggah pengguna di percakapan — kalau belum ada gambar yang diunggah sama sekali di percakapan ini, JANGAN panggil tool ini, cukup beri tahu pengguna untuk mengunggah foto dulu lewat tombol lampiran. Setelah tool ini selesai dan berhasil, cukup beri respons singkat yang ramah (video hasilnya akan otomatis ditampilkan oleh aplikasi, jadi jangan menjelaskan ulang secara teknis atau berlebihan).
 5. "replace_background" — untuk mengganti atau menghapus BACKGROUND foto yang BARU SAJA diunggah pengguna (khusus urusan latar belakang saja, bukan mengedit subjek/orangnya). Panggil ini untuk permintaan seperti: "hapus background", "ganti background jadi pantai/Jepang/hitam/putih/dsb", "buang latar belakangnya", "background-nya diganti jadi...". Tool ini pakai remove.bg (gratis, bukan Gemini), jauh lebih hemat kuota dibanding "edit_image", jadi SELALU utamakan tool ini kalau permintaannya murni soal ganti/hapus background. Kalau pengguna menyebut tempat/tema tertentu untuk background barunya (misal "Jepang", "pantai", "luar angkasa"), isi parameter "background_theme_prompt" dengan deskripsi singkat dalam Bahasa Inggris tentang pemandangan/tema itu (contoh: "Mount Fuji Japan scenery with cherry blossoms", "tropical beach sunset") — JANGAN pernah mengisi dengan URL gambar sungguhan, karena background akan digenerate otomatis oleh sistem dari deskripsi itu (bukan kamu yang mencari URL). Kalau pengguna cuma minta "hapus background" tanpa sebutkan tema baru, biarkan parameter ini kosong (background akan jadi transparan). Tool ini otomatis memakai gambar terakhir yang diunggah pengguna — kalau belum ada gambar sama sekali di percakapan ini, JANGAN panggil, cukup minta pengguna upload foto dulu. Tool ini bisa gagal karena kuota bulanan gratis remove.bg habis (50x/bulan) — kalau itu terjadi, sampaikan ke pengguna dengan jujur dan ramah bahwa kuota bulan ini sudah habis dan akan reset bulan depan. Setelah berhasil, cukup beri respons singkat yang ramah (gambar hasilnya otomatis ditampilkan oleh aplikasi).
@@ -1491,7 +1491,7 @@ Tool yang bisa dipanggil:
 - "run_code": jalankan/uji kode JavaScript sebelum disajikan, untuk kode JS yang cukup rumit (logika, collision detection, perhitungan posisi).
 - "edit_code": WAJIB dipakai (bukan tulis ulang seluruh file) kalau pesan pengguna berisi blok "[KODE AKTIF SAAT INI DI PANEL ARTEFAK PENGGUNA ...]" DAN pesannya berupa: (a) instruksi revisi/tambahan/perbaikan ("tambahin fitur X", "ubah warna Y", "perbaiki bug Z"), ATAU (b) LAPORAN BUG/KELUHAN yang JELAS merujuk ke elemen/fitur aplikasi yang sedang aktif itu (bukan topik lain) — misal "kenapa tombol ini gak jalan", "kok sidebar gak muncul", "ini error pas dibuka". JANGAN anggap laporan bug kalau topik pesannya jelas tidak berhubungan dengan aplikasi/kode aktif (misal sedang bahas hal lain lalu bilang "kok ini gak muncul") — untuk itu jawab sesuai konteks aslinya, abaikan blok [KODE AKTIF]. Kalau memang laporan bug yang relevan: cari akar masalahnya di kode aktif lalu langsung edit_code, JANGAN nulis ulang seluruh file walau merasa bisa bikin versi lebih rapi dari nol. Kirim old_str (potongan PERSIS dari kode aktif, harus unik) + new_str per perubahan, boleh beberapa sekaligus. Kalau error (old_str tidak ketemu/ambigu), perbaiki old_str lalu panggil ulang, jangan langsung nulis ulang semua. Tulis ulang penuh via code block HANYA kalau memang diminta buat project/file BARU dari nol. SEBELUM bertindak, tentukan dulu: apakah pesan pengguna JELAS soal aplikasi ini, JELAS topik lain (abaikan blok kode), atau BENAR-BENAR AMBIGU — kalau ambigu (jarang terjadi), tanya balik singkat ke pengguna dulu ("maksudnya soal aplikasi tadi atau topik baru?") sebelum bertindak, jangan menebak.
 - "web_search" (kalau tersedia): cari info terkini/faktual di web. Hanya panggil kalau memang butuh data terbaru (berita, harga, jadwal, dsb), jangan untuk obrolan biasa. Hasilnya sudah terverifikasi & mempertimbangkan tanggal hari ini — percayai sepenuhnya, jangan sebut "hoaks"/"di masa depan". Jangan tulis daftar sumber manual di jawabanmu, itu ditampilkan otomatis oleh aplikasi.
-- "web_fetch": ambil ISI LENGKAP dari satu URL spesifik yang disebut/ditempel pengguna. WAJIB dipanggil kalau pengguna kasih link dan minta dibaca/diringkas/dianalisis — JANGAN menebak isi URL dari nama domainnya saja. RANTAI OTOMATIS: kalau habis "web_search" hasilnya cuma snippet dan kurang detail buat jawab akurat (misal pengguna minta "yang paling bagus/lengkap di situs X"), langsung lanjut "web_fetch" ke link paling relevan dari hasil search itu di respons yang SAMA, jangan tunggu diminta lagi. Sebelum memanggil web_fetch, tulis dulu 1 kalimat singkat ke pengguna kayak "aku buka dulu halamannya biar lebih akurat" — tapi kalau ternyata TIDAK jadi fetch (search sudah cukup), jangan sebut-sebut soal fetch sama sekali. Kalau errornya URL invalid/blokir/rate limit, bilang jujur ke pengguna, jangan mengarang isinya.
+- "web_fetch": ambil ISI LENGKAP dari satu URL spesifik yang disebut/ditempel pengguna. WAJIB dipanggil kalau pengguna kasih link dan minta dibaca/diringkas/dianalisis — JANGAN menebak isi URL dari nama domainnya saja. RANTAI OTOMATIS: kalau habis "web_search" hasilnya cuma snippet dan kurang detail buat jawab akurat (misal pengguna minta "yang paling bagus/lengkap di situs X"), langsung lanjut "web_fetch" ke link paling relevan dari hasil search itu di respons yang SAMA, jangan tunggu diminta lagi. Sebelum memanggil web_fetch, tulis dulu 1 kalimat singkat ke pengguna kayak "aku buka dulu halamannya biar lebih akurat:" — WAJIB diakhiri dengan titik dua ":" (bukan titik biasa), karena chip "Membaca halaman" akan ditampilkan aplikasi tepat setelah titik dua itu. Tapi kalau ternyata TIDAK jadi fetch (search sudah cukup), jangan sebut-sebut soal fetch sama sekali. Kalau errornya URL invalid/blokir/rate limit, bilang jujur ke pengguna, jangan mengarang isinya.
 
 Khusus game/app <canvas>: sebelum kirim kode final, bayangkan membuka file itu di browser — pastikan ada draw/render pertama saat load (bukan menunggu tombol ditekan), canvas.width/height diset via JS (bukan cuma CSS), dan game loop memanggil dirinya sendiri lagi tiap iterasi. Kalau ragu salah satu poin ini, perbaiki dulu sebelum kirim — ini penyebab paling umum canvas tampil kosong/blank.
 
@@ -3265,7 +3265,8 @@ function buildSourceChipsHtml(sources){
 
 // Chip PERMANEN untuk 1 panggilan web_fetch — beda dari chip sumber web_search (yang buka bottom
 // sheet berisi banyak link), ini cukup 1 link langsung, diberi label host-nya + ikon status
-// sukses/gagal. Diklik akan membuka URL aslinya di tab baru (kalau sukses).
+// sukses/gagal. Diklik akan membuka URL aslinya di tab baru (kalau sukses). Chip ini DITARUH DI
+// BAWAH/AKHIR seluruh jawaban (lihat injectToolEventChips), bukan di tengah teks.
 function buildFetchChipHtml(event){
   const host = event.url ? shortDomainLabel(event.url) : '';
   const label = event.ok
@@ -3283,11 +3284,22 @@ function buildFetchChipHtml(event){
   `</button></div>`;
 }
 
-// Susun teks jawaban akhir DENGAN chip permanen tool events (search/fetch) disisip TEPAT di
-// posisi (afterLength) masing-masing, bukan digabung semua di akhir. Setiap event dipotong sesuai
-// urutan munculnya di teks, supaya chip persis muncul setelah kalimat narasi yang mendahuluinya
-// (mis. "aku coba buka halamannya dulu ya." -> [chip Membaca halaman] -> lanjut jawaban), dan
-// posisinya TIDAK PERNAH berubah lagi setelah itu (persis gaya Claude).
+// Chip RINGKAS "Membaca halaman" (TANPA nama host), statis (tidak bisa diklik), muncul TEPAT di
+// TENGAH teks jawaban — persis setelah kalimat pengantar model yang diakhiri titik dua ":" (mis.
+// "...dulu ya:" -> [chip ini] -> lanjut kalimat berikutnya). Gaya polos abu-abu, baris sendiri,
+// meniru chip "Fetched: ..." di Claude. Berbeda dari buildFetchChipHtml (yang lengkap dgn host &
+// ditaruh di bawah/akhir jawaban) — dua-duanya sama-sama permanen, cuma beda posisi & detail.
+function buildMidTextFetchIndicatorHtml(){
+  const label = getLang() === 'id' ? 'Membaca halaman' : 'Reading the page';
+  const icon = '<path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>';
+  return `<div class="search-indicator done mid-text-indicator" style="margin: 4px 0 8px 0;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">${icon}</svg><span class="shimmer-text">${label}</span></div>`;
+}
+
+// Susun teks jawaban akhir: chip RINGKAS "Membaca halaman" (tanpa host) disisip TEPAT di posisi
+// (afterLength) masing-masing event fetch, mengikuti kalimat pengantar model yang diakhiri ":"
+// — posisi ini TIDAK PERNAH berubah lagi setelah itu (persis gaya Claude). Sedangkan chip LENGKAP
+// (dengan host, utk search maupun fetch: "Sumber" & "Membaca halaman: host") dikumpulkan semua
+// dan ditaruh di BAWAH/AKHIR seluruh jawaban, terpisah dari chip ringkas di tengah tadi.
 function injectToolEventChips(rawText, toolEvents){
   if (!toolEvents || !toolEvents.length) return formatText(rawText);
 
@@ -3300,16 +3312,26 @@ function injectToolEventChips(rawText, toolEvents){
     const cutAt = Math.min(Math.max(event.afterLength, cursor), rawText.length);
     const segment = rawText.slice(cursor, cutAt);
     if (segment) html += formatText(segment);
-    if (event.type === 'search') {
-      html += buildSourceChipsHtml(event.sources || []);
-    } else if (event.type === 'fetch') {
-      html += buildFetchChipHtml(event);
+    if (event.type === 'fetch') {
+      // Cuma chip ringkas (tanpa host) yang nyempil di tengah teks di posisi ini.
+      html += buildMidTextFetchIndicatorHtml();
     }
     cursor = cutAt;
   }
   const remaining = rawText.slice(cursor);
   if (remaining) html += formatText(remaining);
-  return html;
+
+  // Chip LENGKAP (dengan host/favicon, bisa diklik) dikumpulkan semua di BAWAH/AKHIR jawaban,
+  // urut sesuai kemunculan aslinya — search & fetch tergabung dalam satu blok di paling bawah.
+  let bottomChipsHtml = '';
+  for (const event of sorted) {
+    if (event.type === 'search') {
+      bottomChipsHtml += buildSourceChipsHtml(event.sources || []);
+    } else if (event.type === 'fetch') {
+      bottomChipsHtml += buildFetchChipHtml(event);
+    }
+  }
+  return html + bottomChipsHtml;
 }
 
 // Tampilkan bottom sheet berisi daftar lengkap sumber untuk groupId tertentu.
