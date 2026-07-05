@@ -3395,18 +3395,16 @@ function buildSearchIndicatorHtml(mode = 'search'){
   return `<div class="search-indicator" data-search-indicator="active"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">${icon}</svg><span class="shimmer-text">${label}</span></div>`;
 }
 
-// Tampilkan indikator pencarian web SEMENTARA (loading, shimmer) di dalam bubble-col milik row
-// pesan model tertentu. Ini murni indikator "lagi proses" — begitu tool-nya selesai / Astra
-// mulai menjawab, chip ini dihapus (lihat hideSearchIndicator) dan posisi PERMANENnya muncul
-// tepat di tengah teks jawaban lewat injectToolEventChips.
+// Tampilkan indikator pencarian web SEMENTARA (loading, shimmer) TEPAT MENEMPEL di akhir teks yang
+// SEDANG ditampilkan di dalam bubble (bukan elemen terpisah di atas .bubble-col) — supaya sejak awal
+// loading posisinya SUDAH sama dengan posisi permanennya nanti, tidak ada "loncat" dari atas ke tengah.
 function showSearchIndicator(row, mode = 'search'){
   if (!row) return;
-  const col = row.querySelector('.bubble-col');
-  if (!col) return;
-  // Hapus dulu indikator lama (kalau ada, dari tool sebelumnya di round yang sama) sebelum
-  // menambah yang baru, supaya tidak ada 2 chip shimmer bersamaan.
-  col.querySelectorAll('[data-search-indicator]').forEach(el => el.remove());
-  col.insertAdjacentHTML('afterbegin', buildSearchIndicatorHtml(mode));
+  const bubble = row.querySelector('.bubble');
+  if (!bubble) return;
+  // Hapus dulu indikator lama (kalau ada, dari tool sebelumnya di round yang sama) sebelum menambah yang baru.
+  bubble.querySelectorAll('[data-search-indicator]').forEach(el => el.remove());
+  bubble.insertAdjacentHTML('beforeend', buildSearchIndicatorHtml(mode));
   scrollToBottom();
 }
 
