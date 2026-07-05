@@ -930,6 +930,35 @@
     cursor:pointer; text-decoration:underline; padding:0; margin-left:auto;
   }
 
+  /* ---------- Jina API key panel (di bawah tombol web_fetch/fetch link, sama gaya dengan panel Serper) ---------- */
+  .jina-panel{
+    padding: 10px 12px 12px 12px;
+  }
+  .jina-panel-label{
+    font-size:11.5px; color:var(--text-soft); margin:0 0 8px 0; line-height:1.4;
+  }
+  .jina-panel-row{ display:flex; gap:6px; }
+  .jina-input{
+    flex:1; min-width:0; padding:8px 10px; border-radius:8px; border:1px solid var(--border);
+    background:var(--bg); color:var(--text); font-size:12.5px; outline:none; box-sizing:border-box;
+  }
+  .jina-save-btn{
+    padding:8px 12px; border-radius:8px; border:none;
+    background:var(--accent); color:#fff; cursor:pointer; font-size:12.5px; white-space:nowrap;
+  }
+  .jina-save-btn:disabled{ opacity:.5; cursor:default; }
+  .jina-status{
+    font-size:11px; margin-top:7px; display:none; align-items:center; gap:5px;
+  }
+  .jina-status.show{ display:flex; }
+  .jina-status.ok{ color:#3E9B5A; }
+  .jina-status.err{ color:#C0503E; }
+  .jina-status.loading{ color:var(--text-soft); }
+  .jina-clear-btn{
+    background:none; border:none; color:var(--text-soft); font-size:11px;
+    cursor:pointer; text-decoration:underline; padding:0; margin-left:auto;
+  }
+
   #account-overlay, #language-overlay{
     position:fixed; inset:0; background:rgba(0,0,0,.4); z-index:95;
     display:flex; align-items:center; justify-content:center; padding:20px;
@@ -995,7 +1024,7 @@
     <p class="apikey-desc" data-i18n="apikey-groq-desc">Opsional: masukkan API key Groq untuk memakai model Llama 3.1 8B Instant (lebih cepat/murah). Key disimpan hanya di perangkat ini.</p>
     <input id="apikey-groq-input" type="text" placeholder="gsk_..." class="apikey-input">
     <h2 class="apikey-title" style="margin-top:18px;" data-i18n="apikey-openrouter-title">OpenRouter API Key</h2>
-    <p class="apikey-desc" data-i18n="apikey-openrouter-desc">Opsional: masukkan API key OpenRouter untuk memakai model Astra 1.5 Ultra (GPT-OSS 120B) dan Astra 2.5 (NVIDIA Nemotron 3 Super) — keduanya gratis. Key disimpan hanya di perangkat ini.</p>
+    <p class="apikey-desc" data-i18n="apikey-openrouter-desc">Opsional: masukkan API key OpenRouter untuk memakai model Astra 2.0 (Qwen3 Coder) dan Astra 2.5 (NVIDIA Nemotron 3 Super) — keduanya gratis. Key disimpan hanya di perangkat ini.</p>
     <input id="apikey-openrouter-input" type="text" placeholder="sk-or-v1-..." class="apikey-input">
     <h2 class="apikey-title" style="margin-top:18px;" data-i18n="apikey-removebg-title">remove.bg API Key</h2>
     <p class="apikey-desc" data-i18n="apikey-removebg-desc">Opsional: masukkan API key remove.bg untuk memakai fitur ganti/hapus background foto (gratis 50 kali/bulan). Key disimpan hanya di perangkat ini.</p>
@@ -1134,6 +1163,14 @@
                 </div>
                 <div id="serper-status" class="serper-status"></div>
               </div>
+              <div class="jina-panel">
+                <p class="jina-panel-label" data-i18n="jina-label">Opsional: masukkan Jina API key supaya fetch link (baca isi halaman) punya limit lebih tinggi (100x/menit, dari 20x/menit). Kosongkan untuk tetap bisa fetch link tanpa key.</p>
+                <div class="jina-panel-row">
+                  <input id="jina-input" type="text" placeholder="Jina API key..." class="jina-input">
+                  <button id="jina-save-btn" class="jina-save-btn" data-i18n="save">Simpan</button>
+                </div>
+                <div id="jina-status" class="jina-status"></div>
+              </div>
             </div>
           </div>
           <input type="file" id="image-input" accept="image/*" multiple style="display:none;">
@@ -1269,13 +1306,20 @@ function setSerperKey(key){ localStorage.setItem('astra-serper-key', key.trim())
 function clearSerperKey(){ localStorage.removeItem('astra-serper-key'); }
 function isSerperActive(){ return !!getSerperKey(); }
 
+// --- Jina API key (opsional): kalau diisi, fetch link (web_fetch/r.jina.ai) pakai rate limit lebih
+// tinggi (100 req/menit alih-alih 20 req/menit tanpa key). web_fetch tetap berfungsi tanpa key ini.
+function getJinaKey(){ return localStorage.getItem('astra-jina-key') || ''; }
+function setJinaKey(key){ localStorage.setItem('astra-jina-key', key.trim()); }
+function clearJinaKey(){ localStorage.removeItem('astra-jina-key'); }
+function isJinaActive(){ return !!getJinaKey(); }
+
 // Semua model yang didukung. `provider` menentukan jalur request yang dipakai (lihat streamOneTurn).
 // Model Groq/OpenRouter hanya ditampilkan di picker kalau key masing-masing terisi (lihat refreshModelUI/rebuildModelOptions).
 const ASTRA_MODELS = {
   "gemini-2.5-flash": { label: "Astra 1.0 Flash", provider: "gemini", descKey: "model-desc-gemini-2.5-flash" },
   "gemini-3.5-flash": { label: "Astra 1.0 Ultra", provider: "gemini", descKey: "model-desc-gemini-3.5-flash" },
   "llama-3.1-8b-instant": { label: "Astra 1.0 Super Flash", provider: "groq", descKey: "model-desc-llama-3.1-8b" },
-  "openai/gpt-oss-120b:free": { label: "Astra 1.5 Ultra", provider: "openrouter", descKey: "model-desc-gpt-oss-120b" },
+  "qwen/qwen3-coder:free": { label: "Astra 2.0", provider: "openrouter", descKey: "model-desc-qwen3-coder" },
   "nvidia/nemotron-3-super-120b-a12b:free": { label: "Astra 2.5", provider: "openrouter", descKey: "model-desc-nemotron-3-super" }
 };
 function isModelAvailable(modelId){
@@ -1287,7 +1331,7 @@ function isModelAvailable(modelId){
 }
 // Cari model default pertama yang tersedia sesuai key yang sudah diisi user (urutan: gemini dulu, baru groq, baru openrouter).
 function getFirstAvailableModel(){
-  const fallbackOrder = ["gemini-2.5-flash", "gemini-3.5-flash", "llama-3.1-8b-instant", "openai/gpt-oss-120b:free", "nvidia/nemotron-3-super-120b-a12b:free"];
+  const fallbackOrder = ["gemini-2.5-flash", "gemini-3.5-flash", "llama-3.1-8b-instant", "qwen/qwen3-coder:free", "nvidia/nemotron-3-super-120b-a12b:free"];
   for (const id of fallbackOrder) {
     if (isModelAvailable(id)) return id;
   }
@@ -1313,7 +1357,7 @@ function getModelProvider(modelId){
 function getModelIdentityNote(){
   const modelId = getSelectedModel();
   const label = ASTRA_MODELS[modelId]?.label || 'Astra';
-  return `\n\nSYSTEM NOTE (not from the user, DO NOT ignore): You are currently running as "${label}" — this is the name/version currently SELECTED by the user via the model picker menu in the Astra app, and it is the ONLY correct version identity to answer with. If the user asks "what model are you", "what version are you", "which model are you using right now", "what AI model is currently active", or similar questions in any language, you MUST answer exactly "${label}" — never mention any other model/API/company name (e.g. never name the actual third-party large language model running underneath you), and don't mention any other Astra version besides "${label}". This answer must always stay in sync with the currently active model choice; if the user switches models later in the same conversation, this note will be automatically updated on the next request and you must follow the newest value, not what was mentioned earlier in the chat history.`;
+  return `\n\nCATATAN SISTEM (bukan dari pengguna, JANGAN diabaikan): Kamu saat ini sedang berjalan sebagai "${label}" — ini adalah nama/versi model yang SEDANG DIPILIH oleh pengguna lewat menu pemilihan model di aplikasi Astra, dan ini adalah SATU-SATUNYA identitas versi yang benar untuk dijawab. Jika pengguna bertanya "kamu model apa", "kamu versi apa", "sedang pakai model apa sekarang", "model AI apa yang sedang aktif", atau pertanyaan sejenis dalam bahasa apapun, WAJIB jawab tepat "${label}" — jangan pernah menyebut nama model/API/perusahaan lain (misalnya jangan sebut nama model bahasa besar pihak ketiga yang sesungguhnya menjalankanmu di baliknya), dan jangan menyebut versi Astra yang lain selain "${label}". Jawaban ini harus selalu sinkron dengan pilihan model yang sedang aktif; jika pengguna berganti model di kemudian hari dalam percakapan yang sama, catatan ini akan diperbarui otomatis pada request berikutnya dan kamu harus mengikuti nilai yang terbaru, bukan yang disebutkan sebelumnya di riwayat chat.`;
 }
 function getGeminiEndpoint(){
   const model = getSelectedModel();
@@ -1323,20 +1367,18 @@ function getGeminiEndpoint(){
 // instruksi ekstra ini HANYA disuntik kalau model aktif itu, supaya model lain (termasuk
 // Astra 1.0 Flash yang notabene lebih hemat) tidak ikut menanggung token tambahan ini.
 // Ditulis singkat & padat (bukan berulang dengan SYSTEM_PROMPT/knowledge base) demi hemat token.
-const CODING_MODE_MODELS = ['gemini-3.5-flash', 'openai/gpt-oss-120b:free'];
 function getCodingModeNote(){
   const modelId = getSelectedModel();
-  if (!CODING_MODE_MODELS.includes(modelId)) return '';
-  const label = ASTRA_MODELS[modelId]?.label || 'Astra';
-  return `\n\nENHANCED CODING MODE (active because this model is "${label}"): For coding requests, prioritize correctness & completeness over speed — you may think more deeply before answering. Send production-ready and COMPLETE code: even if the user doesn't say so explicitly, still include reasonable error/edge-case handling, basic input validation, and the minimal UI/UX pieces clearly needed for the feature to actually be usable (e.g. loading/empty/error states where relevant, basic accessibility, responsiveness). Don't add complexity beyond the request's scope (don't add big unrequested features) — just make sure what was asked for is itself complete & robust, not a minimal/fragile version. Stay concise in the text explanation outside the code; put the token budget toward the quality of the code itself.`;
+  if (modelId !== 'gemini-3.5-flash') return '';
+  return `\n\nMODE CODING DIPERKUAT (aktif karena model ini "Astra 1.0 Ultra"): Untuk permintaan coding, prioritaskan kebenaran & kelengkapan di atas kecepatan — boleh berpikir lebih dalam sebelum menjawab. Kirim kode yang production-ready dan LENGKAP: walau pengguna tidak menyebut secara eksplisit, tetap sertakan penanganan error/edge case wajar, validasi input dasar, dan bagian UI/UX minimal yang jelas dibutuhkan supaya fitur benar-benar bisa dipakai (contoh: state loading/kosong/error kalau relevan, aksesibilitas dasar, responsif). Jangan menambah kompleksitas di luar cakupan permintaan (jangan tambah fitur besar yang tidak diminta) — cukup pastikan apa yang diminta itu SENDIRI sudah utuh & robust, bukan versi minimal/rapuh. Tetap ringkas dalam penjelasan teks di luar kode; fokus token pada kualitas kode itu sendiri.`;
 }
 // --- Upaya berpikir (thinking effort) ---
-// Model reasoning (gemini-3.5-flash / "Astra 1.0 Ultra" dan openai/gpt-oss-120b:free /
-// "Astra 1.5 Ultra") menampilkan opsi ini di UI. Disimpan PER MODEL di localStorage supaya
-// kalau user pindah-pindah model, preferensi effort masing-masing model tidak saling menimpa.
-const MODEL_EFFORT_SUPPORTED = ['gemini-3.5-flash', 'openai/gpt-oss-120b:free'];
+// Hanya model reasoning (saat ini gemini-3.5-flash / "Astra 1.0 Ultra") yang menampilkan
+// opsi ini di UI. Disimpan PER MODEL di localStorage supaya kalau user pindah-pindah model,
+// preferensi effort masing-masing model tidak saling menimpa.
+const MODEL_EFFORT_SUPPORTED = ['gemini-3.5-flash'];
 const EFFORT_LEVELS = ['low', 'medium', 'high'];
-const EFFORT_DEFAULT = 'high';
+const EFFORT_DEFAULT = 'medium';
 function modelSupportsEffort(modelId){
   return MODEL_EFFORT_SUPPORTED.includes(modelId);
 }
@@ -1365,87 +1407,84 @@ function getGeminiThinkingLevel(){
 const GROQ_ENDPOINT = 'https://api.groq.com/openai/v1/chat/completions';
 const OPENROUTER_ENDPOINT = 'https://openrouter.ai/api/v1/chat/completions';
 
-const SYSTEM_PROMPT = `You are Astra, a friendly, honest, and helpful AI assistant. Answer clearly and naturally. Always reply in the same language the user is currently writing in (for example, reply in English if they write in English, in Indonesian if they write in Indonesian), matching their current message rather than defaulting to any one language.
+const SYSTEM_PROMPT = `Kamu adalah Astra, asisten AI yang ramah, jujur, dan membantu. Jawab dengan jelas dan natural. Gunakan Bahasa Indonesia kecuali diminta bahasa lain.
 
-Important identity rule: if the user asks who created, built, developed, or owns ASTRA ITSELF as an assistant (e.g. "who made you", "who created Astra", "who is Astra's developer", in any language), you MUST always answer that Astra was created by "Pinzz". Never mention any other name, company, or underlying model/API as Astra's creator, no matter how the question is phrased.
+Aturan penting soal identitas: jika pengguna bertanya siapa yang menciptakan, membuat, mengembangkan, atau memiliki ASTRA ITU SENDIRI sebagai asisten AI (misalnya "siapa yang membuat kamu", "siapa pencipta Astra", "siapa developer Astra", dalam bahasa apapun), kamu HARUS selalu menjawab bahwa Astra diciptakan oleh "Pinzz". Jangan pernah menyebut nama lain, perusahaan lain, atau model/API lain sebagai pencipta Astra, walau ditanya dengan cara apapun.
 
-IMPORTANT: the rule above ONLY applies to questions about who created Astra as an assistant. It does NOT apply to other questions that merely touch on the word "made"/"created", such as questions about who compiled/wrote the knowledge base, notes, documents, code, or other things currently being discussed — for those, answer honestly based on the actual context, don't automatically answer "Pinzz".
+PENTING: aturan di atas HANYA berlaku untuk pertanyaan tentang siapa pencipta Astra sebagai asisten. Aturan ini TIDAK berlaku untuk pertanyaan lain yang sekadar menyinggung kata "buat"/"membuat"/"siapa yang membuat", seperti pertanyaan soal siapa yang membuat/menyusun knowledge base, catatan, dokumen, kode, atau hal lain yang sedang dibahas dalam percakapan — untuk pertanyaan semacam itu, jawab sesuai konteks aslinya secara jujur dan apa adanya, jangan otomatis jawab "Pinzz".
 
-You are also a highly skilled and experienced programmer/software engineer, on par with a top-tier coding assistant. When helping with coding, follow these principles:
-- Master all popular programming languages (JavaScript/TypeScript, Python, Java, C/C++, C#, Go, Rust, PHP, Ruby, Swift, Kotlin, SQL, HTML/CSS, etc.) along with their frameworks and libraries (React, Vue, Next.js, Node.js, Django, Flask, Spring, Laravel, etc.).
-- Write clean, efficient code that follows best practices and is easy to read. Use clear variable/function names.
-- Always use code blocks with the correct language tag (e.g. \`\`\`javascript, \`\`\`python) so code is formatted properly.
-- Briefly explain the code's logic before or after it when that helps understanding, but don't ramble.
-- If there's a bug, debug systematically: identify the root cause, explain why it happens, then provide the fix.
-- For architecture or system design questions, consider scalability, security, and maintainability.
-- If a request is ambiguous, make a reasonable assumption, briefly state it, then still provide a complete solution instead of just asking back.
-- Provide code that can genuinely be run/copied directly; avoid pseudocode unless specifically requested.
-- When asked to explain a programming concept, explain with a simple analogy first before going into technical detail.
+Kamu juga adalah seorang programmer/software engineer yang sangat ahli dan berpengalaman, setara dengan asisten coding kelas atas. Saat membantu soal coding, ikuti prinsip berikut:
+- Kuasai semua bahasa pemrograman populer (JavaScript/TypeScript, Python, Java, C/C++, C#, Go, Rust, PHP, Ruby, Swift, Kotlin, SQL, HTML/CSS, dsb) beserta framework dan library-nya (React, Vue, Next.js, Node.js, Django, Flask, Spring, Laravel, dsb).
+- Tulis kode yang bersih, efisien, mengikuti best practice, dan mudah dibaca. Beri nama variabel/fungsi yang jelas.
+- Selalu gunakan format code block dengan penanda bahasa yang benar (misalnya \`\`\`javascript, \`\`\`python) supaya kode terformat rapi.
+- Jelaskan logika kode secara singkat sebelum atau sesudah kode jika membantu pemahaman, tapi jangan bertele-tele.
+- Jika ada bug, lakukan debugging secara sistematis: identifikasi akar masalah, jelaskan penyebabnya, lalu berikan perbaikannya.
+- Untuk soal arsitektur atau desain sistem, pertimbangkan skalabilitas, keamanan, dan maintainability.
+- Jika permintaan ambigu, buat asumsi yang masuk akal, sebutkan asumsinya secara singkat, lalu tetap berikan solusi lengkap daripada hanya bertanya balik.
+- Berikan kode yang benar-benar bisa langsung dijalankan/di-copy, hindari pseudocode kecuali memang diminta.
+- Kalau ditanya menjelaskan konsep pemrograman, jelaskan dengan analogi sederhana dulu baru masuk ke detail teknis.
 
-MANDATORY RULE about how coding answers should close — pay close attention to the words the user uses:
-- If the user uses words like "code", "script", "syntax", or similar (WITHOUT explicitly saying the word "file") — e.g. "give me html code for a dashboard", "write me a snake game" — then AFTER the code block, just give a brief explanation of the code's contents/features. DO NOT include instructions on how to save it as a file (don't write steps like "create a new file called index.html", "save as .html", "double-click to open in browser"), since the user didn't ask for it as a file.
-- If the user explicitly uses the word "file" (e.g. "make me the html file", "create the file", "make an index.html file") — only then may you add brief instructions on how to save & open it as a file.
-- If it's unclear which is meant, treat it as a regular "code" request (the more concise option), not a "file" request.
+ATURAN WAJIB soal gaya penutup jawaban coding — perhatikan baik-baik kata yang dipakai pengguna:
+- Kalau pengguna memakai kata seperti "kode", "codingan", "script", "syntax", atau semacamnya (TANPA menyebut kata "file" secara eksplisit) — misalnya "buatkan saya codingan html dashboard", "buatkan kode game ular" — maka SETELAH code block, jawab dengan penjelasan singkat isi/fitur kodenya saja. JANGAN sertakan instruksi cara menyimpan sebagai file (jangan tulis langkah seperti "buat file baru bernama index.html", "simpan sebagai .html", "klik dua kali untuk membuka di browser"), karena pengguna tidak memintanya sebagai file.
+- Kalau pengguna secara eksplisit memakai kata "file" (misalnya "buatkan file html-nya", "bikinkan filenya", "buatkan file index.html") — barulah kamu boleh menambahkan instruksi singkat cara menyimpan & membukanya sebagai file.
+- Jika tidak jelas mana yang dimaksud, anggap sebagai permintaan "kode" biasa (opsi yang lebih ringkas), bukan "file".
 
-You have tools you can call:
-1. "search_docs" — to look up internal best-practice/technical guidance notes before answering a coding question. See the MANDATORY RULE below about when this tool must be called (not optional for requests to create code/files).
-2. "run_code" — to actually run/test JavaScript code before presenting it to the user, so the code you give is genuinely valid and error-free. Call this when you write JavaScript code that's fairly complex (logic, functions, algorithms) and you want to make sure the result is correct before answering. Don't call it for pure HTML/CSS or languages other than JavaScript (run_code only supports JavaScript).
-3. "edit_code" — MANDATORY RULE: if you see a block like "[CURRENT ACTIVE CODE IN THE USER'S ARTIFACT PANEL ...]" in the user's message, it means a file was previously successfully created and is currently active. This tool MUST be used (not just "may be used") for ALL of the following message types while that file is active — pay close attention, this is NOT limited to direct commands:
-   a) Explicit instructions: "add feature X", "change color Y", "remove this part", "make the button bigger".
-   b) BUG REPORTS / COMPLAINTS, even if not phrased as a command, BUT ONLY if they clearly refer to an element/feature of that currently active file (e.g. hamburger menu, sidebar, button, form, something not showing/not working/erroring IN THE APP Astra built) — examples: "why doesn't the sidebar show up when I click the hamburger", "why doesn't this button work", "why isn't the API key being saved", "this errors when I open it". Sentences like this mean "fix that bug in the currently active code" — treat it exactly like the instruction "please fix this bug", DO NOT respond with only a text explanation, and DO NOT respond by rewriting the entire file. Find the likely root cause in the given [ACTIVE CODE], then directly call edit_code to fix the part responsible.
-   IMPORTANT — do NOT misfire: if the topic of the user's message is CLEARLY unrelated to that active app/code (e.g. they're discussing something completely different like learning to paint, a school subject, a general topic, etc., and then say "this isn't showing up/I can't see it"), do NOT treat that as a code bug report — answer according to the actual topic being discussed, ignore the existence of the [ACTIVE CODE] block entirely for that message. Words like "not showing up"/"not working"/"like this" do NOT automatically mean a code bug — they only count as a bug report if the conversation context is actually about the app/feature from the active code.
-4. "animate_image" — to turn a photo/image the user JUST uploaded in this conversation into a short video with a Ken Burns effect (smooth cinematic zoom & pan). Call this ONLY when the user explicitly asks for their image to be animated/turned into a video/made to move/brought to life (e.g. "animate this photo", "turn this image into a video", "make this picture move"). This tool automatically uses the last image the user uploaded in this conversation — if no image has been uploaded at all in this conversation, DO NOT call this tool, just tell the user to upload a photo first via the attachment button. After this tool finishes successfully, just give a short, friendly response (the resulting video will be shown automatically by the app, so don't re-explain it technically or excessively).
-5. "replace_background" — to replace or remove the BACKGROUND of a photo the user JUST uploaded (background only, not editing the subject/person). Call this for requests like: "remove the background", "change the background to a beach/Japan/black/white/etc.", "remove the backdrop", "change the background to...". This tool uses remove.bg (free, not Gemini), which is much cheaper on quota than "edit_image", so ALWAYS prefer this tool when the request is purely about changing/removing the background. If the user mentions a specific place/theme for the new background (e.g. "Japan", "beach", "outer space"), fill the "background_theme_prompt" parameter with a brief English description of that scene/theme (e.g. "Mount Fuji Japan scenery with cherry blossoms", "tropical beach sunset") — NEVER fill it with an actual image URL, since the background will be auto-generated by the system from that description (you're not the one searching for a URL). If the user just asks to "remove the background" without naming a new theme, leave this parameter empty (the background will become transparent). This tool automatically uses the last image the user uploaded — if there's no image at all in this conversation, DO NOT call it, just ask the user to upload a photo first. This tool can fail because remove.bg's free monthly quota ran out (50x/month) — if that happens, honestly and kindly tell the user this month's quota is used up and will reset next month. After success, just give a short, friendly response (the resulting image is shown automatically by the app).
-6. "edit_image" — to edit the CONTENT of a photo the user JUST uploaded using natural-language instructions, for anything OTHER than the background (remove an object/person, change clothing color, change to a certain style, colorize a black-and-white photo, etc.). DO NOT use this tool for background replace/remove requests — use "replace_background" for that since it's cheaper on quota. Call "edit_image" when the user asks to change the image's content with an instruction other than background (e.g. "remove the person in the back", "turn this into anime style", "change the shirt color to red"). Write the "instruction" parameter in clear, specific English based on the user's request, so the edit result is more accurate. DO NOT call this for animation/video requests (that's "animate_image"'s job). This tool automatically uses the last image the user uploaded — if there's no image at all in this conversation, DO NOT call it, just ask the user to upload a photo first. This tool can fail due to the image-editing model's daily quota/limit running out — if that happens, honestly and kindly tell the user the image-editing quota is currently exhausted and can be tried again later/tomorrow, don't pretend it succeeded. After success, just give a short, friendly response (the resulting image is shown automatically by the app).
+Kamu punya tool yang bisa dipanggil:
+1. "search_docs" — untuk mencari catatan best practice/panduan teknis internal sebelum menjawab pertanyaan coding. Lihat ATURAN WAJIB di bawah soal kapan tool ini harus dipanggil (tidak opsional untuk permintaan membuat kode/file).
+2. "run_code" — untuk menjalankan/menguji kode JavaScript secara nyata sebelum kamu sajikan ke pengguna, supaya kode yang kamu berikan benar-benar valid dan tidak error. Panggil ini ketika kamu menulis kode JavaScript yang cukup rumit (logika, fungsi, algoritma) dan ingin memastikan hasilnya benar sebelum menjawab. Jangan panggil untuk kode HTML/CSS murni atau bahasa selain JavaScript (karena run_code hanya mendukung JavaScript).
+3. "edit_code" — ATURAN WAJIB: kalau di pesan pengguna kamu melihat blok "[KODE AKTIF SAAT INI DI PANEL ARTEFAK PENGGUNA ...]", artinya sudah ada file yang sebelumnya berhasil dibuat dan sedang aktif. Tool ini WAJIB dipakai (bukan cuma "boleh") untuk SEMUA jenis pesan berikut selama file itu sedang aktif — perhatikan baik-baik, ini TIDAK terbatas pada kalimat perintah langsung:
+   a) Instruksi eksplisit: "tambahin fitur X", "ubah warna Y", "hapus bagian ini", "gedein tombolnya".
+   b) LAPORAN BUG / KELUHAN, walau tidak berbentuk perintah, TAPI HANYA kalau memang merujuk ke elemen/fitur dari file yang sedang aktif itu (misal: hamburger menu, sidebar, tombol, form, tampilan yang tidak muncul/tidak berfungsi/error PADA APLIKASI yang dibuat Astra) — contoh: "kenapa pas saya pencet hamburger gak muncul sidebar", "kok tombol ini gak berfungsi", "kenapa API key gak kesave", "ini error pas dibuka". Kalimat seperti ini berarti "perbaiki bug tersebut di kode yang sedang aktif" — perlakukan persis sama seperti instruksi "tolong perbaiki bug ini", JANGAN dijawab hanya dengan penjelasan teks, dan JANGAN ditanggapi dengan menulis ulang seluruh file. Cari kemungkinan akar masalahnya di [KODE AKTIF] yang diberikan, lalu langsung panggil edit_code untuk memperbaiki bagian kode yang jadi penyebabnya.
+   PENTING — JANGAN salah trigger: kalau topik pesan pengguna JELAS TIDAK berhubungan dengan aplikasi/kode aktif itu (misalnya sedang membahas hal lain sama sekali seperti belajar melukis/menggambar, pelajaran sekolah, topik umum, dsb, lalu bilang "kok ini gak muncul/gak keliatan"), JANGAN anggap itu laporan bug kode — jawab sesuai konteks aslinya (topik yang sedang dibahas), abaikan keberadaan blok [KODE AKTIF] sepenuhnya untuk pesan itu. Kata-kata "gak muncul"/"gak jalan"/"kok gini" TIDAK otomatis berarti bug kode — hanya jadi laporan bug kalau konteks percakapannya memang sedang membahas aplikasi/fitur dari kode yang aktif.
+   c) Pertanyaan troubleshooting: "apa yang salah dari kode ini", "kenapa ini bisa error" — kalau setelah dianalisis kamu menemukan perbaikan konkret, langsung terapkan lewat edit_code (jangan cuma menjelaskan tanpa memperbaiki, kecuali pengguna secara eksplisit cuma minta penjelasan tanpa minta diperbaiki).
+   Untuk SEMUA kasus di atas: kamu WAJIB memanggil tool "edit_code" untuk mengubah HANYA bagian yang relevan, JANGAN menulis ulang seluruh file lewat code block, walaupun kamu yakin bisa menulis ulang versi yang lebih rapi/lebih baik dari nol — prioritas utama adalah TIDAK membuang perubahan/data yang sudah ada di file itu yang tidak berkaitan dengan masalah yang dilaporkan. Setiap edit berisi old_str (potongan kode PERSIS apa adanya dari kode aktif tadi, harus unik) dan new_str (penggantinya). Kamu boleh kirim beberapa edit sekaligus dalam satu panggilan. Kalau tool mengembalikan error (old_str tidak ketemu/ambigu), baca pesan errornya, perbaiki old_str (biasanya perlu konteks baris lebih banyak/lebih spesifik) lalu panggil ulang — JANGAN menyerah dan menulis ulang seluruh file hanya karena satu edit gagal di percobaan pertama. Tulis ulang SELURUH file lewat code block HANYA kalau pengguna memang eksplisit minta dibuatkan project/file BARU dari nol (bukan revisi/perbaikan file yang sudah ada), atau kalau perubahan yang diminta memang menyangkut sebagian besar/mayoritas struktur file.
+   LANGKAH WAJIB SEBELUM BERTINDAK: setiap kali ada blok [KODE AKTIF] di pesan pengguna, sebelum kamu memanggil tool apapun (edit_code/search_docs/dsb) atau menulis kode, tentukan dulu secara eksplisit satu dari tiga kondisi ini berdasarkan isi pesan pengguna DAN sinyal jumlah giliran sejak kode terakhir disentuh (ada di dalam blok [KODE AKTIF]): (1) JELAS tentang aplikasi/kode aktif ini -> lanjut proses seperti aturan di atas; (2) JELAS bukan tentang aplikasi ini (topik lain) -> abaikan blok kode, jawab sesuai topik aslinya; (3) BENAR-BENAR AMBIGU (kamu tidak bisa menentukan dengan yakin dari kalimat + konteks yang ada) -> HANYA untuk kasus ini, jangan menebak dan jangan langsung bertindak ke kode — cukup tanyakan balik ke pengguna secara singkat dan ramah, misalnya "maksudnya soal aplikasi yang tadi dibuat, atau ini topik baru ya?", lalu tunggu jawabannya sebelum lanjut. Kondisi (3) ini pengecualian yang JARANG dipakai — kebanyakan kasus seharusnya sudah cukup jelas masuk (1) atau (2) dari konteksnya, jangan jadikan bertanya sebagai kebiasaan default.
+3. "web_search" (kalau tersedia) — untuk mencari informasi terkini/faktual di internet. HANYA panggil ini kalau pesan pengguna memang cocok untuk dicari di web: berita terbaru, harga/kurs, jadwal, statistik yang berubah-ubah, fakta terkini, atau apapun yang kamu tidak tahu pasti/berada di luar pengetahuanmu. Kamu sendiri yang menentukan kapan pertanyaan pengguna butuh pencarian web — jangan panggil untuk obrolan biasa, sapaan, opini, atau pertanyaan yang sudah bisa kamu jawab sendiri dengan yakin tanpa perlu data terbaru. Tool ini mungkin tidak selalu tersedia (tergantung pengaturan pengguna); kalau kamu tidak melihat tool ini di daftar tools, jangan mencoba memanggilnya, cukup jawab dengan pengetahuanmu sendiri.
+4. "web_fetch" — untuk mengambil ISI LENGKAP dari satu URL/link spesifik (bukan sekadar kata kunci pencarian). WAJIB dipanggil setiap kali pengguna menempelkan/menyebutkan sebuah link dan memintamu membaca, meringkas, menganalisis, atau menjawab pertanyaan berdasarkan isi link tersebut — JANGAN pernah berasumsi/menebak isi sebuah URL hanya dari nama domain atau potongan URL-nya, selalu ambil isi aslinya dulu lewat tool ini. Juga bisa dipanggil kalau kamu perlu membaca detail lengkap dari sebuah halaman yang muncul di hasil "web_search" (misalnya "sources" hasil pencarian) untuk menjawab pertanyaan yang butuh detail lebih dalam dari sekadar snippet ringkas. Kalau hasil tool ini berupa error (URL tidak valid/halaman blokir akses/rate limit), sampaikan ke pengguna secara jujur bahwa halamannya tidak bisa diakses, jangan mengarang isi halaman tersebut.
+4. "animate_image" — untuk mengubah foto/gambar yang BARU SAJA diunggah pengguna di percakapan ini menjadi video pendek dengan efek Ken Burns (zoom & pan sinematik halus). Panggil ini HANYA ketika pengguna secara eksplisit minta gambarnya dianimasikan/dijadikan video/digerakkan/dibikin hidup (contoh: "animasikan foto ini", "jadiin video dong gambarnya", "bikin gambar ini bergerak"). Tool ini otomatis memakai gambar terakhir yang diunggah pengguna di percakapan — kalau belum ada gambar yang diunggah sama sekali di percakapan ini, JANGAN panggil tool ini, cukup beri tahu pengguna untuk mengunggah foto dulu lewat tombol lampiran. Setelah tool ini selesai dan berhasil, cukup beri respons singkat yang ramah (video hasilnya akan otomatis ditampilkan oleh aplikasi, jadi jangan menjelaskan ulang secara teknis atau berlebihan).
+5. "replace_background" — untuk mengganti atau menghapus BACKGROUND foto yang BARU SAJA diunggah pengguna (khusus urusan latar belakang saja, bukan mengedit subjek/orangnya). Panggil ini untuk permintaan seperti: "hapus background", "ganti background jadi pantai/Jepang/hitam/putih/dsb", "buang latar belakangnya", "background-nya diganti jadi...". Tool ini pakai remove.bg (gratis, bukan Gemini), jauh lebih hemat kuota dibanding "edit_image", jadi SELALU utamakan tool ini kalau permintaannya murni soal ganti/hapus background. Kalau pengguna menyebut tempat/tema tertentu untuk background barunya (misal "Jepang", "pantai", "luar angkasa"), isi parameter "background_theme_prompt" dengan deskripsi singkat dalam Bahasa Inggris tentang pemandangan/tema itu (contoh: "Mount Fuji Japan scenery with cherry blossoms", "tropical beach sunset") — JANGAN pernah mengisi dengan URL gambar sungguhan, karena background akan digenerate otomatis oleh sistem dari deskripsi itu (bukan kamu yang mencari URL). Kalau pengguna cuma minta "hapus background" tanpa sebutkan tema baru, biarkan parameter ini kosong (background akan jadi transparan). Tool ini otomatis memakai gambar terakhir yang diunggah pengguna — kalau belum ada gambar sama sekali di percakapan ini, JANGAN panggil, cukup minta pengguna upload foto dulu. Tool ini bisa gagal karena kuota bulanan gratis remove.bg habis (50x/bulan) — kalau itu terjadi, sampaikan ke pengguna dengan jujur dan ramah bahwa kuota bulan ini sudah habis dan akan reset bulan depan. Setelah berhasil, cukup beri respons singkat yang ramah (gambar hasilnya otomatis ditampilkan oleh aplikasi).
+6. "edit_image" — untuk mengedit ISI/KONTEN foto yang BARU SAJA diunggah pengguna memakai instruksi bahasa natural, SELAIN urusan background (hapus objek/orang, ubah warna baju, ubah jadi gaya tertentu, colorize foto hitam-putih, dsb). JANGAN pakai tool ini untuk permintaan ganti/hapus background — untuk itu pakai "replace_background" karena lebih hemat kuota. Panggil "edit_image" ketika pengguna minta mengubah isi gambarnya dengan kalimat perintah selain background (contoh: "hilangkan orang di belakang", "ubah jadi anime", "ganti warna baju jadi merah"). Tulis parameter "instruction" dalam Bahasa Inggris yang jelas dan spesifik berdasarkan permintaan pengguna, supaya hasil editnya lebih akurat. JANGAN panggil untuk permintaan animasi/video (itu tugas "animate_image"). Tool ini otomatis memakai gambar terakhir yang diunggah pengguna — kalau belum ada gambar sama sekali di percakapan ini, JANGAN panggil, cukup minta pengguna upload foto dulu. Tool ini bisa gagal karena kuota/limit harian model edit gambar habis — kalau itu terjadi, sampaikan ke pengguna dengan jujur dan ramah bahwa kuota edit gambar sedang habis dan bisa dicoba lagi nanti/besok, jangan berpura-pura berhasil. Setelah berhasil, cukup beri respons singkat yang ramah (gambar hasilnya otomatis ditampilkan oleh aplikasi).
 
-MANDATORY RULE about "web_search" results: results returned by this tool have ALREADY been verified via a real Google Search (from several different sources/websites) and already account for today's actual date — so FULLY TRUST and USE these results as current fact, DO NOT dispute, doubt, or dismiss them as "hoax"/"hasn't happened yet"/"probably fiction" just because the content feels "futuristic" or conflicts with your internal knowledge. Your internal knowledge has a cutoff date, while web_search results are real-time information that is newer and more accurate — if the two conflict, the web_search result is correct. Answer directly and confidently, without disclaimers doubting the event's validity. DO NOT manually write a list of sources/links/domains at the end of your answer (e.g. "Sources: ...") — the source list is displayed automatically by the app outside your answer text, so just focus on answering the user's question.
+ATURAN WAJIB soal hasil "web_search": hasil yang dikembalikan tool ini SUDAH diverifikasi dari pencarian Google Search sungguhan (dari beberapa sumber/website berbeda) dan sudah mempertimbangkan tanggal hari ini yang sebenarnya — jadi PERCAYAI dan GUNAKAN hasil itu sepenuhnya sebagai fakta terkini, JANGAN dibantah, diragukan, atau dianggap "hoaks"/"belum terjadi"/"kemungkinan fiksi" hanya karena isinya terasa "di masa depan" atau bertentangan dengan pengetahuan internalmu. Pengetahuan internalmu punya batas waktu (training cutoff), sedangkan hasil web_search adalah info real-time yang lebih baru dan lebih akurat — kalau keduanya bertentangan, hasil web_search yang benar. Sampaikan jawabannya secara langsung dan percaya diri, tanpa disclaimer meragukan validitas peristiwanya. JANGAN menuliskan daftar sumber/link/domain apapun secara manual di akhir jawabanmu (misal "Sumber: ...") — daftar sumber akan ditampilkan otomatis oleh aplikasi di luar teks jawabanmu, jadi cukup fokus jawab pertanyaan penggunanya saja.
 
-MANDATORY RULE — for EVERY request asking you to create/write NEW code or a file from scratch (HTML, CSS, JavaScript, Python, or any language — whether it's a game, dashboard, calculator, landing page, simple script, even if it looks easy): you MUST call "search_docs" with a query naming the type/topic of that request FIRST, before writing a single line of code. This is not optional and does not depend on how simple the request looks or how confident you already are — always call it first. Exceptions: (1) coding questions that are purely discussion/concept explanation without being asked to write new code (e.g. "what is a closure in JavaScript", "explain the difference between let and var"); (2) requests that are not about coding at all (regular chat, greetings); (3) requests to make a small REVISION/EDIT to EXISTING code (see the "edit_code" rule above) — for this case you MAY call "edit_code" directly without "search_docs" first, unless the revision is fairly large/adds a fairly complex new feature such that you yourself feel the need to check best practices first.
+ATURAN WAJIB — untuk SETIAP permintaan yang meminta kamu membuat/menulis kode atau file BARU dari nol (HTML, CSS, JavaScript, Python, atau bahasa apapun — baik itu game, dashboard, kalkulator, landing page, script sederhana, sekalipun terlihat mudah): kamu WAJIB memanggil "search_docs" dengan query yang menyebutkan jenis/topik permintaan tersebut TERLEBIH DAHULU, sebelum menulis satu baris kode pun. Ini bukan opsional dan tidak bergantung pada seberapa sederhana permintaannya atau seberapa yakin kamu sudah tahu caranya — selalu panggil dulu. Kekecualian: (1) pertanyaan coding yang sifatnya diskusi/penjelasan konsep tanpa diminta menulis kode baru (misalnya "apa itu closure di JavaScript", "jelaskan bedanya let dan var"); (2) permintaan non-coding sama sekali (obrolan biasa, sapaan); (3) permintaan REVISI/EDIT kecil terhadap kode yang SUDAH ADA (lihat aturan "edit_code" di atas) — untuk kasus ini kamu BOLEH langsung memanggil "edit_code" tanpa "search_docs" dulu, kecuali revisinya cukup besar/menambah fitur baru yang cukup kompleks sehingga kamu sendiri merasa perlu cek best practice-nya dulu.
 
-ADDITIONAL MANDATORY RULE — specifically for requests to build a game, visual app, or anything using HTML5 <canvas> (e.g. snake game, tetris, flappy bird, pong, interactive animation): besides the mandatory "search_docs" call above, the query sent must also explicitly name "canvas"/"game" and that specific game type, so the checklist you get back is relevant to the canvas case.
+ATURAN WAJIB TAMBAHAN — khusus permintaan membuat game, aplikasi visual, atau apapun yang memakai HTML5 <canvas> (contoh: game ular/snake, tetris, flappy bird, pong, platformer, animasi interaktif): selain wajib memanggil "search_docs" di atas, query yang dikirim juga WAJIB menyebut kata "canvas"/"game" dan jenis game tersebut secara spesifik, supaya checklist yang didapat relevan untuk kasus canvas.
 
-After receiving the checklist from search_docs, write your code following that checklist. BEFORE you send the final code to the user, you MUST explicitly perform the following self-check in your own reasoning (not written out to the user) — SPECIFICALLY for code using HTML5 <canvas>:
-- Imagine opening this HTML file in a browser right now. Will something actually be drawn on the canvas BEFORE the user presses any button (e.g. a grid/board, initial character, score)? If the answer is no/unsure, that means the first draw/render function hasn't been called on initialization — fix this before sending.
-- Is canvas.width and canvas.height set via JavaScript (not just CSS)? If unsure, double check the code.
-- Does the game loop (requestAnimationFrame or setInterval) actually call itself again on every iteration? If a line forgets to call itself again, the canvas will freeze/go blank after the first frame.
-- If there's fairly complex non-visual logic (position calculations, collision detection, scoring), consider calling "run_code" to test that logic separately before combining it into the full HTML.
-If even one of the points above fails when you imagine it, DO NOT send that code — fix it until you're confident the canvas will actually be visible as soon as the file is opened, then send it to the user. Failing to follow this is the most common cause of a blank/empty canvas even when there's no JavaScript error at all.
+Setelah menerima checklist dari search_docs, tulis kode kamu mengikuti checklist itu. SEBELUM kamu kirim kode final ke pengguna, WAJIB lakukan verifikasi mandiri berikut secara eksplisit di pikiranmu (bukan ditulis ke pengguna) — KHUSUS untuk kode yang memakai HTML5 <canvas>:
+- Bayangkan kamu membuka file HTML ini di browser sekarang. Apakah ada sesuatu yang akan langsung tergambar di canvas SEBELUM pengguna menekan tombol apapun (misal grid/papan, karakter awal, skor)? Kalau jawabannya tidak/ragu, berarti fungsi draw/render pertama belum dipanggil saat inisialisasi — perbaiki dulu sebelum kirim.
+- Apakah canvas.width dan canvas.height diset lewat JavaScript (bukan cuma CSS)? Kalau tidak yakin, cek ulang kodenya.
+- Apakah game loop (requestAnimationFrame atau setInterval) benar-benar memanggil dirinya sendiri lagi di setiap iterasi? Kalau ada baris yang lupa memanggil ulang, canvas akan freeze/blank setelah frame pertama.
+- Kalau ada logika non-visual yang cukup rumit (perhitungan posisi, collision detection, skor), pertimbangkan memanggil "run_code" untuk menguji logika itu secara terpisah sebelum menyatukannya ke HTML lengkap.
+Kalau ada satu saja dari poin di atas yang gagal saat kamu bayangkan, JANGAN kirim kode itu — perbaiki dulu sampai kamu yakin canvas akan langsung terlihat begitu file dibuka, baru kirim ke pengguna. Kegagalan mengikuti ini adalah penyebab paling umum kanvas tampil kosong/blank walau tidak ada error JavaScript sama sekali.
 
-GENERAL SELF-CHECK (for non-canvas code too, e.g. forms, API calls, backend endpoints, data processing): before sending any fairly substantial piece of code, briefly imagine running it with realistic and edge-case input (empty input, invalid input, a failed network request, an empty list) — would it crash, hang, or silently do the wrong thing? If yes, fix it first. This doesn't need to be as exhaustive as the canvas checklist, just a genuine sanity pass rather than sending the first draft untested in your head.
+Jika pengguna bertanya soal knowledge base/catatan teknis yang kamu pakai (misalnya "siapa yang membuat knowledge-nya", "dari mana catatan itu", "apa isi knowledge base kamu"), jawab jujur bahwa itu adalah kumpulan catatan best practice teknis internal yang sudah disiapkan sebagai bagian dari sistem Astra untuk membantu jawaban coding jadi lebih akurat, bukan sesuatu yang perlu dikaitkan dengan pertanyaan "siapa pencipta Astra".
 
-A few habits that make your coding answers noticeably better, apply them together with the rules above:
-- State hidden assumptions: if the request is ambiguous (e.g. no framework/language/library specified, or a detail is left open), briefly state in one line the assumption you're going with before the code, so the user can correct it if it's wrong — don't just silently guess and stay quiet about it.
-- Prefer simple over clever: when there are multiple valid ways to solve something, default to the simpler, more readable one, even if a more "clever" or optimized approach exists — only reach for the clever/optimized version if the user asked for performance/scale, or the simple version is genuinely inadequate.
-- Write for a human reader: assume the code will be read and maintained by another developer, not just executed once — use clear names, add brief comments for non-obvious logic (not for obvious lines), and keep structure easy to follow, not just "technically correct."
+Gunakan tool ini secara wajar sesuai kebutuhan — jangan memanggilnya untuk hal yang tidak relevan, dan jangan ragu memanggilnya kalau memang akan membuat jawabanmu lebih baik.`;
 
-If the user asks about the knowledge base/technical notes you use (e.g. "who made the knowledge base", "where are those notes from", "what's in your knowledge base"), answer honestly that it's a set of internal technical best-practice notes prepared as part of the Astra system to help make coding answers more accurate, not something that should be tied to the question "who created Astra".
+// Versi ringkas dari SYSTEM_PROMPT, khusus dipakai jalur Groq (model llama-3.1-8b-instant).
+// Akun Groq gratis punya limit TPM (tokens per minute) yang cukup ketat (misal 6000/menit),
+// dan system prompt dihitung sebagai token input di SETIAP request — memakai SYSTEM_PROMPT
+// versi lengkap (~1600+ token) membuat request gampang mepet/lewat limit walau pesan pengguna pendek.
+// Inti aturan (identitas Pinzz, gaya coding, cara pakai tool) tetap dipertahankan, cuma dipadatkan.
+const SYSTEM_PROMPT_GROQ = `Kamu adalah Astra, asisten AI yang ramah, jujur, dan membantu. Jawab dengan jelas dan natural dalam Bahasa Indonesia kecuali diminta bahasa lain.
 
-Use these tools reasonably as needed — don't call them for irrelevant things, and don't hesitate to call them when doing so will genuinely make your answer better.`;
+Jika ditanya siapa pencipta/pembuat/developer Astra (asisten ini sendiri), selalu jawab "Pinzz". Jangan sebut nama/perusahaan/model lain. Aturan ini HANYA untuk pertanyaan soal pencipta Astra, bukan untuk pertanyaan lain yang cuma menyinggung kata "buat" (misal soal siapa yang menyusun knowledge base) — untuk itu jawab jujur apa adanya.
 
-// Condensed version of SYSTEM_PROMPT, used only for the Groq path (llama-3.1-8b-instant model).
-// Free Groq accounts have a fairly tight TPM (tokens per minute) limit (e.g. 6000/minute),
-// and the system prompt counts as input tokens on EVERY request — using the full
-// SYSTEM_PROMPT (~1600+ tokens) makes requests easily hit/exceed the limit even for short user messages.
-// The core rules (Pinzz identity, coding style, how to use tools) are kept, just condensed.
-const SYSTEM_PROMPT_GROQ = `You are Astra, a friendly, honest, and helpful AI assistant. Answer clearly and naturally, always in the same language the user is currently writing in.
+Kamu juga programmer ahli: tulis kode bersih & langsung bisa dijalankan, pakai code block dengan bahasa yang benar, jelaskan logika secara singkat, dan debug secara sistematis kalau ada bug.
 
-If asked who created/built/developed Astra (this assistant itself), always answer "Pinzz". Don't mention any other name/company/model. This rule ONLY applies to questions about Astra's creator, not other questions that merely touch on the word "made" (e.g. about who compiled the knowledge base) — for those, answer honestly as-is.
+Tool yang bisa dipanggil:
+- "search_docs": cari panduan teknis internal. WAJIB dipanggil dulu (query sebutkan jenis/topiknya) SEBELUM menulis kode/file apapun (HTML/CSS/JS/Python/dll) — tidak opsional, berlaku untuk semua permintaan bikin kode walau terlihat sederhana (kalkulator, dashboard, dsb), kecuali sekadar pertanyaan konsep tanpa nulis kode baru. Khusus game/app <canvas>: query juga wajib sebut kata "canvas"/"game" dan jenis gamenya.
+- "run_code": jalankan/uji kode JavaScript sebelum disajikan, untuk kode JS yang cukup rumit (logika, collision detection, perhitungan posisi).
+- "edit_code": WAJIB dipakai (bukan tulis ulang seluruh file) kalau pesan pengguna berisi blok "[KODE AKTIF SAAT INI DI PANEL ARTEFAK PENGGUNA ...]" DAN pesannya berupa: (a) instruksi revisi/tambahan/perbaikan ("tambahin fitur X", "ubah warna Y", "perbaiki bug Z"), ATAU (b) LAPORAN BUG/KELUHAN yang JELAS merujuk ke elemen/fitur aplikasi yang sedang aktif itu (bukan topik lain) — misal "kenapa tombol ini gak jalan", "kok sidebar gak muncul", "ini error pas dibuka". JANGAN anggap laporan bug kalau topik pesannya jelas tidak berhubungan dengan aplikasi/kode aktif (misal sedang bahas hal lain lalu bilang "kok ini gak muncul") — untuk itu jawab sesuai konteks aslinya, abaikan blok [KODE AKTIF]. Kalau memang laporan bug yang relevan: cari akar masalahnya di kode aktif lalu langsung edit_code, JANGAN nulis ulang seluruh file walau merasa bisa bikin versi lebih rapi dari nol. Kirim old_str (potongan PERSIS dari kode aktif, harus unik) + new_str per perubahan, boleh beberapa sekaligus. Kalau error (old_str tidak ketemu/ambigu), perbaiki old_str lalu panggil ulang, jangan langsung nulis ulang semua. Tulis ulang penuh via code block HANYA kalau memang diminta buat project/file BARU dari nol. SEBELUM bertindak, tentukan dulu: apakah pesan pengguna JELAS soal aplikasi ini, JELAS topik lain (abaikan blok kode), atau BENAR-BENAR AMBIGU — kalau ambigu (jarang terjadi), tanya balik singkat ke pengguna dulu ("maksudnya soal aplikasi tadi atau topik baru?") sebelum bertindak, jangan menebak.
+- "web_search" (kalau tersedia): cari info terkini/faktual di web. Hanya panggil kalau memang butuh data terbaru (berita, harga, jadwal, dsb), jangan untuk obrolan biasa. Hasilnya sudah terverifikasi & mempertimbangkan tanggal hari ini — percayai sepenuhnya, jangan sebut "hoaks"/"di masa depan". Jangan tulis daftar sumber manual di jawabanmu, itu ditampilkan otomatis oleh aplikasi.
+- "web_fetch": ambil ISI LENGKAP dari satu URL spesifik yang disebut/ditempel pengguna. WAJIB dipanggil kalau pengguna kasih link dan minta dibaca/diringkas/dianalisis — JANGAN menebak isi URL dari nama domainnya saja. Kalau errornya URL invalid/blokir/rate limit, bilang jujur ke pengguna, jangan mengarang isinya.
 
-You are also an expert programmer: write clean, directly runnable code, use code blocks with the correct language tag, briefly explain the logic, and debug systematically when there's a bug.
+Khusus game/app <canvas>: sebelum kirim kode final, bayangkan membuka file itu di browser — pastikan ada draw/render pertama saat load (bukan menunggu tombol ditekan), canvas.width/height diset via JS (bukan cuma CSS), dan game loop memanggil dirinya sendiri lagi tiap iterasi. Kalau ragu salah satu poin ini, perbaiki dulu sebelum kirim — ini penyebab paling umum canvas tampil kosong/blank.
 
-Tools you can call:
-- "search_docs": look up internal technical guidance. MUST be called first (query naming the type/topic) BEFORE writing any code/file (HTML/CSS/JS/Python/etc.) — not optional, applies to all requests to build code even if they look simple (calculator, dashboard, etc.), except plain concept questions without writing new code. For games/apps using <canvas>: the query must also name "canvas"/"game" and the game type.
-- "run_code": run/test JavaScript code before presenting it, for JS code that's fairly complex (logic, collision detection, position calculations).
-- "edit_code": MUST be used (instead of rewriting the whole file) if the user's message contains a block like "[CURRENT ACTIVE CODE IN THE USER'S ARTIFACT PANEL ...]" AND the message is: (a) a revision/addition/fix instruction ("add feature X", "change color Y", "fix bug Z"), OR (b) a BUG REPORT/COMPLAINT that CLEARLY refers to an element/feature of that currently active app (not another topic) — e.g. "why doesn't this button work", "why doesn't the sidebar show up", "this errors when I open it". Do NOT treat it as a bug report if the message topic is clearly unrelated to the active app/code (e.g. discussing something else entirely and then saying "this isn't showing up") — for that, answer according to the actual topic, ignore the [ACTIVE CODE] block. If it genuinely is a relevant bug report: find the root cause in the active code then call edit_code directly, DO NOT rewrite the entire file even if you feel you could make a cleaner version from scratch. Send old_str (an EXACT snippet from the active code, must be unique) + new_str per change, multiple at once is fine. If it errors (old_str not found/ambiguous), fix the old_str and call again, don't immediately rewrite everything. Only do a full rewrite via code block if the user is asking for a genuinely NEW project/file from scratch. BEFORE acting, first determine: is the user's message CLEARLY about this app, CLEARLY another topic (ignore the code block), or GENUINELY AMBIGUOUS — if ambiguous (rare), briefly ask the user back ("do you mean the app from before, or something new?") before acting, don't guess.
-- "web_search" (if available): look up current/factual info online. Only call this when you genuinely need up-to-date data (news, prices, schedules, etc.), not for regular chat. Its results are already verified & account for today's date — fully trust them, don't call them "hoax"/"futuristic". Don't write a manual source list in your answer, that's displayed automatically by the app.
+Soal penutup jawaban coding: kalau pengguna minta "kode"/"codingan"/"script" (tanpa kata "file"), JANGAN tulis instruksi cara simpan sebagai file (jangan bilang "buat file baru", "simpan sebagai .html", dsb) — cukup jelaskan singkat fiturnya. Instruksi cara simpan file HANYA ditulis kalau pengguna eksplisit menyebut kata "file".
 
-For games/apps using <canvas>: before sending the final code, imagine opening that file in a browser — make sure there's an initial draw/render on load (not waiting for a button press), canvas.width/height are set via JS (not just CSS), and the game loop calls itself again every iteration. If unsure about any of these, fix it before sending — this is the most common cause of a blank/empty canvas. For other substantial code (forms, API calls, backend), briefly sanity-check edge cases (empty/invalid input, failed request) before sending.
-
-Coding habits: if the request is ambiguous, state your assumption in one line before the code. Prefer simple, readable solutions over clever/optimized ones unless asked for performance. Write code for a human reader (clear names, brief comments on non-obvious logic).
-
-On how to close coding answers: if the user asks for "code"/"script" (without the word "file"), DO NOT write instructions on saving it as a file (don't say "create a new file", "save as .html", etc.) — just briefly explain its features. Only include file-saving instructions if the user explicitly uses the word "file".
-
-Call tools as needed — don't call them for irrelevant things.`;
+Panggil tool secukupnya sesuai kebutuhan, jangan asal panggil untuk hal yang tidak relevan.`;
 
 /* =========================================================
    Knowledge base coding — dicari oleh tool "search_docs"
@@ -1556,101 +1595,6 @@ const CODING_KNOWLEDGE_BASE = [
 8. Selalu sertakan kondisi berhenti/reset (collision detection dengan dinding & badan sendiri untuk game seperti ular) dan uji secara logis: apakah collision check dijalankan SEBELUM atau SESUDAH posisi diupdate — urutan yang salah menyebabkan game terasa "nabrak duluan" atau tidak pernah game over.
 
 9. Setelah kode selesai ditulis, telusuri ulang alur secara manual: inisialisasi → gambar pertama kali → loop berjalan → input mengubah state → render mengikuti state terbaru. Jika ada satu langkah yang terputus (misalnya draw pertama lupa dipanggil), kanvas akan terlihat kosong walau tidak ada error JavaScript sama sekali.`
-  },
-  {
-    id: "error-handling-ux",
-    keywords: ["error handling", "try catch", "error", "exception", "loading state", "empty state", "fallback", "user experience", "ux"],
-    title: "Error Handling & UX State yang Baik",
-    content: `Kode yang "jalan tanpa error saat ditulis" berbeda dari kode yang "robust saat dipakai user sungguhan". Checklist wajib:
-
-1. Setiap operasi yang bisa gagal (fetch API, parsing JSON, akses localStorage, operasi file) HARUS dibungkus try/catch — jangan asumsikan operasi selalu sukses.
-
-2. Tampilkan TIGA state secara eksplisit untuk operasi async: loading (sedang proses), error (gagal, dengan pesan yang jelas bukan cuma "terjadi kesalahan"), dan empty (berhasil tapi datanya kosong/nol hasil) — ketiganya sering dilupakan, developer cuma handle "success" saja.
-   Contoh pola React:
-   \`\`\`jsx
-   if (loading) return <Spinner />;
-   if (error) return <ErrorMessage retry={fetchData}>{error.message}</ErrorMessage>;
-   if (!data || data.length === 0) return <EmptyState text="Belum ada data" />;
-   return <DataList items={data} />;
-   \`\`\`
-
-3. Jangan pernah menelan error secara diam-diam (catch(e){} kosong) — minimal log ke console, idealnya juga beri feedback ke user.
-
-4. Untuk validasi input, gagal secepat mungkin (fail fast) dengan pesan spesifik: sebutkan field mana yang salah dan kenapa, bukan pesan generik "input tidak valid".
-
-5. Sediakan cara retry/recover untuk error yang sifatnya sementara (network timeout, rate limit) — jangan buat user harus reload seluruh halaman.`
-  },
-  {
-    id: "form-validation",
-    keywords: ["form", "validasi", "validation", "input", "email", "password", "required field", "form html"],
-    title: "Form & Input Validation Best Practices",
-    content: `1. Validasi di DUA sisi: client-side (untuk UX cepat/instan feedback) DAN server-side/logic-side (karena client-side selalu bisa dilewati/dimanipulasi) — jangan pernah percaya validasi client saja untuk data yang menentukan.
-
-2. Gunakan atribut HTML native dulu sebelum reinvent the wheel: required, type="email", minlength, maxlength, pattern — browser sudah menghandle sebagian validasi dasar secara gratis.
-
-3. Beri feedback real-time yang jelas: tandai field mana yang error, dengan pesan spesifik di dekat field itu (bukan cuma alert() generik di pojok), dan bersihkan pesan error begitu user mulai memperbaiki input.
-
-4. Untuk password: validasi kekuatan password di sisi client sebagai bantuan UX, tapi JANGAN PERNAH kirim/simpan password dalam bentuk plain text — itu tanggung jawab backend untuk hashing (bcrypt/argon2), bukan sesuatu yang bisa "dijamin aman" hanya dari JS frontend.
-
-5. Disable tombol submit selama proses submit berlangsung (mencegah double-submit) dan aktifkan kembali setelah selesai (baik sukses maupun gagal) — pola umum: set state isSubmitting=true di awal, reset di finally block.
-
-6. Untuk form dengan banyak field, pertimbangkan validasi per-field saat blur (user keluar dari field) daripada menunggu submit, supaya user tidak kaget dengan banyak error sekaligus di akhir.`
-  },
-  {
-    id: "async-data-fetching",
-    keywords: ["fetch", "api call", "axios", "async data", "loading", "http request", "rest api call"],
-    title: "Pola Fetch Data & Async yang Robust",
-    content: `1. Selalu tangani 3 kemungkinan hasil dari fetch: sukses dengan data, sukses tapi status HTTP error (fetch() TIDAK otomatis throw untuk status 4xx/5xx — harus cek res.ok secara manual), dan gagal total (network error, throw otomatis).
-   \`\`\`javascript
-   async function getData(url) {
-     try {
-       const res = await fetch(url);
-       if (!res.ok) throw new Error(\`HTTP error \${res.status}\`);
-       return await res.json();
-     } catch (err) {
-       console.error('Fetch gagal:', err);
-       throw err; // lempar lagi supaya caller bisa tampilkan UI error
-     }
-   }
-   \`\`\`
-
-2. Untuk request yang mungkin lambat, pertimbangkan AbortController untuk timeout atau membatalkan request lama saat user mengetik cepat (misalnya di search box) — mencegah race condition di mana response lama tiba setelah response baru.
-
-3. Jangan lupa cleanup: jika komponen di-unmount sebelum fetch selesai (React/Vue), pastikan tidak melakukan setState pada komponen yang sudah tidak ada (gunakan flag isMounted atau AbortController di useEffect cleanup).
-
-4. Untuk data yang sering diakses berulang, pertimbangkan caching sederhana (in-memory Map atau localStorage dengan TTL) untuk mengurangi request berulang yang tidak perlu.`
-  },
-  {
-    id: "nodejs-backend-basics",
-    keywords: ["node", "nodejs", "express", "backend", "server", "api endpoint", "middleware"],
-    title: "Node.js/Express Backend Best Practices",
-    content: `1. Selalu gunakan middleware error handler terpusat di Express (function dengan 4 parameter: (err, req, res, next)) di akhir chain middleware, jangan tangani error secara ad-hoc di tiap route.
-
-2. Validasi & sanitasi SEMUA input dari request (body, query, params) sebelum diproses — jangan pernah percaya data dari client, gunakan library seperti zod/joi/express-validator untuk skema validasi yang konsisten.
-
-3. Gunakan async/await dengan try/catch di setiap route handler async, atau wrapper seperti express-async-handler, supaya Promise rejection tidak silently crash server tanpa response ke client.
-
-4. Jangan expose stack trace atau detail error internal ke response client di production — log detail lengkap di server, kirim pesan generik + kode error ke client.
-
-5. Gunakan environment variables (.env, jangan hardcode) untuk secret/config (database URL, API key, port), dan JANGAN PERNAH commit file .env ke git — sertakan di .gitignore.
-
-6. Untuk endpoint yang mengubah data (POST/PUT/DELETE), kembalikan status code HTTP yang sesuai (201 untuk created, 204 untuk delete tanpa body, 400 untuk bad request, 401/403 untuk auth, 404 untuk not found, 500 untuk server error) — jangan selalu 200 untuk semua kasus.`
-  },
-  {
-    id: "performance-optimization",
-    keywords: ["performance", "optimasi", "optimize", "lambat", "slow", "lag", "memory leak", "render lambat"],
-    title: "Performance Optimization Dasar",
-    content: `1. Untuk render list panjang di frontend (ratusan/ribuan item), gunakan virtualisasi (render hanya item yang terlihat di viewport) alih-alih render semua item sekaligus ke DOM.
-
-2. Debounce/throttle event yang terpicu sangat sering (scroll, resize, input keyup untuk search) — jangan jalankan operasi berat (fetch API, kalkulasi kompleks) di setiap event tanpa delay.
-
-3. Hindari memory leak: selalu bersihkan event listener, interval/timeout, dan subscription saat komponen di-unmount atau elemen dihapus — event listener yang tidak dibersihkan akan terus menumpuk di memory pada single-page app.
-
-4. Untuk gambar, gunakan lazy loading (loading="lazy" di tag img, atau Intersection Observer) untuk gambar yang belum terlihat di viewport awal.
-
-5. Minimalkan operasi DOM berulang di dalam loop — kumpulkan perubahan dulu (misal via DocumentFragment atau batch update), baru sentuh DOM sekali di akhir, karena setiap sentuhan DOM relatif mahal dibanding operasi JS murni.
-
-6. Untuk kalkulasi berat yang hasilnya sama untuk input yang sama, pertimbangkan memoization (cache hasil berdasarkan input) daripada menghitung ulang setiap kali dipanggil.`
   }
 ];
 
@@ -1817,6 +1761,21 @@ const GEMINI_WEB_SEARCH_DECLARATION = {
   }
 };
 
+const GEMINI_WEB_FETCH_DECLARATION = {
+  name: "web_fetch",
+  description: "Ambil ISI LENGKAP dari satu URL/link spesifik yang diberikan pengguna atau yang kamu temukan (misalnya dari hasil web_search), lalu konversi ke teks bersih supaya bisa kamu baca dan pahami. Panggil ini ketika: (a) pengguna menempelkan/menyebutkan sebuah link dan minta kamu membaca/meringkas/menjawab berdasarkan isinya, atau (b) kamu perlu membaca detail lengkap dari sebuah halaman (bukan cuma snippet ringkas dari web_search). JANGAN panggil untuk kata kunci pencarian biasa (pakai web_search untuk itu) — tool ini khusus untuk URL yang sudah jelas/spesifik.",
+  parameters: {
+    type: "object",
+    properties: {
+      url: {
+        type: "string",
+        description: "URL lengkap yang ingin diambil isinya, contoh: 'https://example.com/artikel'. Harus diawali http:// atau https://."
+      }
+    },
+    required: ["url"]
+  }
+};
+
 // Bangun daftar tools untuk dikirim ke Gemini. Kalau toggle pencarian web mati,
 // tool "web_search" TIDAK didaftarkan sama sekali, sehingga Gemini tidak akan pernah bisa memanggilnya.
 function buildGeminiTools(){
@@ -1830,6 +1789,9 @@ function buildGeminiTools(){
   if (isWebSearchEnabled() && webSearchUsable) {
     decls.push(GEMINI_WEB_SEARCH_DECLARATION);
   }
+  // web_fetch (baca isi 1 URL) TIDAK butuh API key sama sekali (pakai Jina Reader gratis, r.jina.ai),
+  // jadi selalu didaftarkan di ketiga provider tanpa syarat toggle/key apapun.
+  decls.push(GEMINI_WEB_FETCH_DECLARATION);
   return [{ function_declarations: decls }];
 }
 
@@ -2364,8 +2326,7 @@ const translations = {
     "apikey-groq-desc": "Optional: enter a Groq API key to use the Llama 3.1 8B Instant model (faster/cheaper). The key is stored only on this device.",
     "apikey-groq-hint": "Get a free Groq key at",
     "apikey-openrouter-title": "OpenRouter API Key",
-    "apikey-openrouter-desc": "Optional: enter an OpenRouter API key to use Astra 1.5 Ultra (GPT-OSS 120B) and Astra 2.5 (NVIDIA Nemotron 3 Super) — both free. The key is stored only on this device.",
-    "error-rate-limited": "Whoa, {model} is really busy with other people right now (this is a free model, so its quota is shared across a lot of users). Try one of these:\n\n- Wait 1-2 minutes then send your message again\n- Or switch to another model for now via the model picker above\n\nThis isn't a bug in Astra, the provider's side is just full right now.",
+    "apikey-openrouter-desc": "Optional: enter an OpenRouter API key to use Astra 2.0 (Qwen3 Coder) and Astra 2.5 (NVIDIA Nemotron 3 Super) — both free. The key is stored only on this device.",
     "apikey-openrouter-hint": "Get a free OpenRouter key at",
     "apikey-removebg-title": "remove.bg API Key",
     "apikey-removebg-desc": "Optional: enter a remove.bg API key to use the background replace/remove feature (free, 50 calls/month). The key is stored only on this device.",
@@ -2374,7 +2335,7 @@ const translations = {
     "model-desc-gemini-2.5-flash": "Fast and light for everyday chat",
     "model-desc-gemini-3.5-flash": "Smarter, great for coding & reasoning",
     "model-desc-llama-3.1-8b": "Super fast, via Groq",
-    "model-desc-gpt-oss-120b": "Built for coding & reasoning, up to 15,000 output tokens, free via OpenRouter",
+    "model-desc-qwen3-coder": "Specialized for coding, free via OpenRouter",
     "model-desc-nemotron-3-super": "Versatile all-rounder, free via OpenRouter",
     "cancel": "Cancel",
     "save": "Save",
@@ -2391,6 +2352,7 @@ const translations = {
     "photo": "Photo",
     "web-search": "Web search",
     "serper-label": "Optional: enter a Serper API key to search using Serper (more sources). Leave empty to use built-in Google Search.",
+    "jina-label": "Optional: enter a Jina API key for a higher link-fetch rate limit (100/min instead of 20/min). Leave empty to still fetch links, just at a lower limit.",
     "choose-model": "Choose model",
     "model-1-desc": "Fast and light for everyday chat",
     "model-2-desc": "Smarter, excels at coding & reasoning",
@@ -2431,8 +2393,7 @@ const translations = {
     "apikey-groq-desc": "Opsional: masukkan API key Groq untuk memakai model Llama 3.1 8B Instant (lebih cepat/murah). Key disimpan hanya di perangkat ini.",
     "apikey-groq-hint": "Groq key gratis di",
     "apikey-openrouter-title": "OpenRouter API Key",
-    "apikey-openrouter-desc": "Opsional: masukkan API key OpenRouter untuk memakai model Astra 1.5 Ultra (GPT-OSS 120B) dan Astra 2.5 (NVIDIA Nemotron 3 Super) — keduanya gratis. Key disimpan hanya di perangkat ini.",
-    "error-rate-limited": "Waduh, {model} lagi rame banget dipakai orang lain saat ini (ini model gratis, jadi kuotanya dibagi bareng-bareng ke banyak orang). Coba salah satu dari ini ya:\n\n- Tunggu 1-2 menit lalu kirim pesanmu lagi\n- Atau ganti sementara ke model lain lewat menu pemilihan model di atas\n\nBukan bug dari Astra, cuma lagi penuh aja di sisi providernya.",
+    "apikey-openrouter-desc": "Opsional: masukkan API key OpenRouter untuk memakai model Astra 2.0 (Qwen3 Coder) dan Astra 2.5 (NVIDIA Nemotron 3 Super) — keduanya gratis. Key disimpan hanya di perangkat ini.",
     "apikey-openrouter-hint": "OpenRouter key gratis di",
     "apikey-removebg-title": "remove.bg API Key",
     "apikey-removebg-desc": "Opsional: masukkan API key remove.bg untuk memakai fitur ganti/hapus background foto (gratis 50 kali/bulan). Key disimpan hanya di perangkat ini.",
@@ -2441,7 +2402,7 @@ const translations = {
     "model-desc-gemini-2.5-flash": "Cepat dan ringan untuk obrolan sehari-hari",
     "model-desc-gemini-3.5-flash": "Lebih pintar, unggul untuk coding & penalaran",
     "model-desc-llama-3.1-8b": "Super cepat, via Groq",
-    "model-desc-gpt-oss-120b": "Cocok untuk coding & penalaran, output hingga 15.000 token, gratis via OpenRouter",
+    "model-desc-qwen3-coder": "Spesialis coding, gratis via OpenRouter",
     "model-desc-nemotron-3-super": "Serbaguna segala kebutuhan, gratis via OpenRouter",
     "cancel": "Batal",
     "save": "Simpan",
@@ -2458,6 +2419,7 @@ const translations = {
     "photo": "Foto",
     "web-search": "Pencarian web",
     "serper-label": "Opsional: masukkan Serper API key supaya pencarian web pakai Serper (lebih banyak sumber). Kosongkan untuk pakai Google Search bawaan.",
+    "jina-label": "Opsional: masukkan Jina API key supaya limit fetch link lebih tinggi (100x/menit, dari 20x/menit). Kosongkan tetap bisa fetch link, hanya limitnya lebih rendah.",
     "choose-model": "Pilih model",
     "model-1-desc": "Cepat dan ringan untuk obrolan sehari-hari",
     "model-2-desc": "Lebih pintar, unggul untuk coding & penalaran",
@@ -2720,6 +2682,75 @@ serperSaveBtn.addEventListener('click', async () => {
   } else {
     // Key salah/gagal divalidasi: JANGAN disimpan, provider tetap Google Search bawaan.
     setSerperStatus('err', lang === 'id' ? 'Key tidak valid. Pencarian web tetap pakai Google Search.' : 'Invalid key. Web search stays on Google Search.');
+  }
+});
+
+/* ---------- Panel Jina API key (opsional, buat naikkan rate limit web_fetch/fetch link) ---------- */
+const jinaInput = document.getElementById('jina-input');
+const jinaSaveBtn = document.getElementById('jina-save-btn');
+const jinaStatusEl = document.getElementById('jina-status');
+
+function setJinaStatus(kind, text){
+  // kind: 'loading' | 'ok' | 'err' | '' (kosong = sembunyikan)
+  jinaStatusEl.className = 'jina-status' + (kind ? ' show ' + kind : '');
+  jinaStatusEl.innerHTML = text || '';
+}
+
+function renderJinaClearOption(){
+  const lang = getLang();
+  const activeLabel = lang === 'id' ? 'Jina aktif — fetch link pakai limit 100x/menit.' : 'Jina active — link fetch uses 100 req/min limit.';
+  const clearLabel = lang === 'id' ? 'Hapus' : 'Remove';
+  setJinaStatus('ok', `${activeLabel} <button type="button" class="jina-clear-btn" id="jina-clear-btn">${clearLabel}</button>`);
+  const clearBtn = document.getElementById('jina-clear-btn');
+  if (clearBtn) {
+    clearBtn.addEventListener('click', () => {
+      clearJinaKey();
+      jinaInput.value = '';
+      setJinaStatus('', '');
+    });
+  }
+}
+
+// Saat halaman dimuat: kalau sudah ada Jina key tersimpan, tampilkan statusnya
+if (isJinaActive()) {
+  jinaInput.value = getJinaKey();
+  renderJinaClearOption();
+}
+
+// Validasi key dengan 1x fetch ringan ke r.jina.ai sebelum benar-benar disimpan/diaktifkan,
+// supaya kalau key salah, tetap fallback ke mode tanpa key (limit 20/menit) bukannya error terus.
+async function validateJinaKey(key){
+  try {
+    const res = await fetch('https://r.jina.ai/https://example.com', {
+      headers: { 'Authorization': 'Bearer ' + key, 'X-Return-Format': 'markdown' }
+    });
+    return res.ok;
+  } catch (e) {
+    return false;
+  }
+}
+
+jinaSaveBtn.addEventListener('click', async () => {
+  const key = jinaInput.value.trim();
+  const lang = getLang();
+  if (!key) {
+    // Kosongkan berarti user mau kembali ke mode tanpa key (limit 20/menit)
+    clearJinaKey();
+    setJinaStatus('', '');
+    return;
+  }
+  jinaSaveBtn.disabled = true;
+  setJinaStatus('loading', lang === 'id' ? 'Memeriksa key...' : 'Checking key...');
+
+  const valid = await validateJinaKey(key);
+  jinaSaveBtn.disabled = false;
+
+  if (valid) {
+    setJinaKey(key);
+    renderJinaClearOption();
+  } else {
+    // Key salah/gagal divalidasi: JANGAN disimpan, web_fetch tetap jalan tanpa key (limit 20/menit).
+    setJinaStatus('err', lang === 'id' ? 'Key tidak valid. Fetch link tetap jalan tanpa key (limit lebih rendah).' : 'Invalid key. Link fetch still works without a key (lower limit).');
   }
 });
 
@@ -3270,18 +3301,25 @@ function injectSourceChips(rawText, searchGroups){
   return bodyHtml + chipsHtml;
 }
 
-// Indikator "Mencari di web" / "Searching the web" dengan efek shimmer — tampilan beda dari reading-indicator.
-function buildSearchIndicatorHtml(){
-  const label = getLang() === 'id' ? 'Mencari di web' : 'Searching the web';
-  return `<div class="search-indicator" data-search-indicator><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg><span class="shimmer-text">${label}</span></div>`;
+// Indikator "Mencari di web" / "Membaca halaman" dengan efek shimmer — tampilan beda dari reading-indicator.
+// mode: 'search' (default, ikon kaca pembesar) atau 'fetch' (ikon dokumen/link, dipakai saat web_fetch berjalan).
+function buildSearchIndicatorHtml(mode = 'search'){
+  const isFetch = mode === 'fetch';
+  const label = isFetch
+    ? (getLang() === 'id' ? 'Membaca halaman' : 'Reading the page')
+    : (getLang() === 'id' ? 'Mencari di web' : 'Searching the web');
+  const icon = isFetch
+    ? '<path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>'
+    : '<circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/>';
+  return `<div class="search-indicator" data-search-indicator><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">${icon}</svg><span class="shimmer-text">${label}</span></div>`;
 }
 
 // Tampilkan indikator pencarian web di dalam bubble-col milik row pesan model tertentu.
-function showSearchIndicator(row){
+function showSearchIndicator(row, mode = 'search'){
   if (!row) return;
   const col = row.querySelector('.bubble-col');
   if (!col || col.querySelector('[data-search-indicator]')) return;
-  col.insertAdjacentHTML('afterbegin', buildSearchIndicatorHtml());
+  col.insertAdjacentHTML('afterbegin', buildSearchIndicatorHtml(mode));
   scrollToBottom();
 }
 
@@ -3626,19 +3664,14 @@ async function streamOneTurnOpenRouter(contents, onChunk){
   const messages = convertContentsToOpenRouterMessages(contents);
   const tools = convertToolsToGroqFormat(buildGeminiTools()); // format tools OpenAI sama dengan Groq
 
-  const isGptOss120b = getSelectedModel() === 'openai/gpt-oss-120b:free';
   const body = {
     model: getSelectedModel(),
     messages,
     temperature: 0.7,
-    max_tokens: isGptOss120b ? 8000 : 4096,
+    max_tokens: 4096,
     stream: true
   };
   if (tools.length) body.tools = tools;
-  // openai/gpt-oss-120b:free mendukung parameter reasoning effort native (low/medium/high),
-  // dipetakan dari preferensi effort per-model yang sama dipakai untuk Astra 1.0 Ultra (Gemini).
-  const effort = getModelEffort(getSelectedModel());
-  if (effort) body.reasoning = { effort };
 
   let res;
   try {
@@ -3658,9 +3691,7 @@ async function streamOneTurnOpenRouter(contents, onChunk){
 
   if (!res.ok) {
     const errData = await res.json().catch(() => ({}));
-    console.error('[OpenRouter error]', { status: res.status, model: getSelectedModel(), body, errData });
-    const providerMsg = errData?.error?.metadata?.raw || errData?.error?.message;
-    throw new Error(providerMsg || `HTTP ${res.status} dari OpenRouter`);
+    throw new Error(errData?.error?.message || `HTTP ${res.status} dari OpenRouter`);
   }
 
   const reader = res.body.getReader();
@@ -3737,15 +3768,15 @@ async function performWebSearchGemini(query, todayStr){
   }
   const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${getSelectedModel()}:generateContent`;
 
-  const searchSystemInstruction = `Today is ${todayStr}. This is the ACTUAL current date — treat this as absolute fact, NEVER dispute it or assume this system/date is wrong, even if it differs from your internal knowledge.
+  const searchSystemInstruction = `Hari ini adalah ${todayStr}. Ini adalah tanggal SEBENARNYA saat ini — anggap ini fakta mutlak, JANGAN pernah membantahnya atau mengira sistem/tanggal ini salah, walau berbeda dari pengetahuan internalmu.
 
-You have been given access to Google Search to look up CURRENT information that may have happened AFTER your training knowledge cutoff. Mandatory rules when answering:
-- Fully trust the Google Search results, ALWAYS prioritize search results over your internal knowledge, especially for events, deaths, news, or occurrences dated more recently than your knowledge cutoff.
-- NEVER call an event a "hoax", "fake news", "possibly fiction/satire", or doubt its validity JUST because its date feels "futuristic" according to your training knowledge. Today's date has been confirmed above — many things may have already happened since your knowledge stopped updating.
-- If several trustworthy sources (news, encyclopedias, official sites) consistently report the same thing, treat it as FACT, not speculation.
-- DO NOT stop at a single search result. Do multiple searches with varied keywords/angles if needed (e.g. news sources, encyclopedia/Wikipedia, official sites, discussion forums) so your answer is backed by AS MANY different independent sources as possible, not just one website.
-- At the end of your answer, you MUST include a separate section titled "Sources:" containing a numbered list of all the distinct websites/domains you used as references (site name only, e.g. 1. Wikipedia 2. Reuters 3. BBC, etc.) — include as many unique sources as you genuinely used, not just one.
-- Answer the user's query directly, concisely, factually, and neutrally based on the search results. Don't add a disclaimer about "this is beyond your knowledge" unless the search genuinely found nothing/nothing relevant.`;
+Kamu diberi akses Google Search untuk mencari informasi TERKINI yang mungkin terjadi SETELAH batas pengetahuan trainingmu. Aturan wajib saat menjawab:
+- Percayai hasil pencarian Google Search sepenuhnya, SELALU utamakan hasil pencarian di atas pengetahuan internalmu, terutama untuk peristiwa, kematian, berita, atau kejadian yang tanggalnya lebih baru dari batas pengetahuanmu.
+- JANGAN PERNAH menyebut suatu peristiwa sebagai "hoaks", "berita palsu", "kemungkinan fiksi/satire", atau meragukan validitasnya HANYA karena tanggal kejadiannya terasa "di masa depan" menurut pengetahuan trainingmu. Tanggal hari ini sudah dikonfirmasi di atas — banyak hal bisa saja sudah terjadi sejak pengetahuanmu berhenti diperbarui.
+- Jika beberapa sumber tepercaya (berita, ensiklopedia, situs resmi) secara konsisten melaporkan hal yang sama, anggap itu FAKTA, bukan spekulasi.
+- JANGAN berhenti di satu hasil pencarian saja. Lakukan pencarian ganda dengan variasi kata kunci/sudut pandang berbeda jika perlu (misalnya sumber berita, ensiklopedia/Wikipedia, situs resmi, forum diskusi) supaya jawabanmu didukung OLEH SEBANYAK MUNGKIN sumber independen yang berbeda-beda, bukan cuma dari satu website.
+- Di akhir jawabanmu, WAJIB sertakan bagian terpisah berjudul "Sumber:" berisi daftar bernomor semua website/domain berbeda yang kamu gunakan sebagai referensi (nama situs saja, contoh: 1. Wikipedia 2. Kompas.com 3. Reuters, dst) — sertakan sebanyak mungkin sumber unik yang benar-benar kamu pakai, jangan cuma satu.
+- Jawab query pengguna secara langsung, ringkas, faktual, dan netral berdasarkan hasil pencarian. Jangan tambahkan disclaimer soal "ini di luar pengetahuanmu" kecuali hasil pencarian memang benar-benar tidak ditemukan/tidak relevan.`;
 
   try {
     const res = await fetch(endpoint, {
@@ -3844,15 +3875,15 @@ async function performWebSearchSerper(query, todayStr){
   }
 
   // 2) Minta model meringkas hasil mentah tsb jadi jawaban natural yang tetap menyebut sumbernya
-  const summarizeInstruction = `Today is ${todayStr}. Treat this as absolute fact. You have been given raw Google search results below (via Serper) for the query: "${query}".
+  const summarizeInstruction = `Hari ini adalah ${todayStr}. Anggap ini fakta mutlak. Kamu diberi hasil pencarian Google (via Serper) mentah di bawah untuk query: "${query}".
 
-Mandatory rules:
-- Fully trust the contents of these search results as current fact, DO NOT dispute/label them "hoax"/"hasn't happened yet" just because they feel outside your internal knowledge or "futuristic".
-- Compose a concise, factual, straight-to-the-point answer based on these search results. Combine information from multiple relevant results.
-- At the end of your answer, you MUST include a "Sources:" section containing a numbered list of the site names (domains) from the results you actually used, as many unique sources as possible (e.g. 1. Wikipedia 2. Reuters 3. BBC).
-- Don't add a disclaimer doubting validity unless the data is genuinely empty/irrelevant.
+Aturan wajib:
+- Percayai isi hasil pencarian ini sepenuhnya sebagai fakta terkini, JANGAN dibantah/dicap "hoaks"/"belum terjadi" hanya karena terasa di luar pengetahuan internalmu atau "di masa depan".
+- Susun jawaban ringkas, faktual, langsung ke inti, berdasarkan hasil pencarian ini. Gabungkan info dari beberapa hasil yang relevan.
+- Di akhir jawabanmu, WAJIB sertakan bagian "Sumber:" berisi daftar bernomor nama situs (domain) dari hasil yang benar-benar kamu pakai, sebanyak mungkin sumber unik (contoh: 1. Wikipedia 2. Kompas.com 3. Reuters).
+- Jangan tambahkan disclaimer meragukan validitas kecuali datanya memang kosong/tidak relevan.
 
-Raw search results (JSON):
+Hasil pencarian mentah (JSON):
 ${JSON.stringify({ answerBox, knowledgeGraph, organic })}`;
 
   let text = '';
@@ -3883,7 +3914,7 @@ ${JSON.stringify({ answerBox, knowledgeGraph, organic })}`;
       const data = await res.json();
       text = (data?.choices?.[0]?.message?.content || '').trim();
     } else if (provider === 'openrouter') {
-      // Ringkas pakai model OpenRouter yang sedang dipilih user (GPT-OSS 120B atau Nemotron 3 Super) — tidak butuh Gemini key sama sekali.
+      // Ringkas pakai model OpenRouter yang sedang dipilih user (Qwen3 Coder atau Nemotron 3 Super) — tidak butuh Gemini key sama sekali.
       const res = await fetch(OPENROUTER_ENDPOINT, {
         method: 'POST',
         headers: {
@@ -3945,6 +3976,42 @@ ${JSON.stringify({ answerBox, knowledgeGraph, organic })}`;
     return JSON.stringify({ summary: text || 'Tidak ditemukan hasil relevan.', sources, sourceCount: sources.length, provider: 'serper' });
   } catch (e) {
     return JSON.stringify({ error: e.message || 'Gagal meringkas hasil pencarian.' });
+  }
+}
+
+// Ambil isi LENGKAP dari satu URL spesifik pakai Jina AI Reader (r.jina.ai) — gratis, tanpa API key,
+// otomatis mengonversi halaman apapun (artikel, dokumentasi, dsb) jadi teks/markdown bersih yang
+// mudah dibaca model. Rate limit tanpa API key sekitar 20 request/menit per IP, cukup untuk
+// pemakaian personal. Dibatasi panjang hasilnya supaya tidak membanjiri context window.
+const MAX_WEB_FETCH_CHARS = 15000;
+async function performWebFetch(url){
+  let cleanUrl = (url || '').trim();
+  if (!cleanUrl) {
+    return JSON.stringify({ error: 'URL kosong.' });
+  }
+  if (!/^https?:\/\//i.test(cleanUrl)) {
+    cleanUrl = 'https://' + cleanUrl; // toleransi kalau model lupa nulis skema
+  }
+  try {
+    const headers = { 'X-Return-Format': 'markdown' };
+    // Kalau user sudah isi Jina API key (opsional), sisipkan sebagai Authorization header supaya
+    // rate limit naik dari 20/menit (tanpa key) jadi 100/menit (dengan key gratis). Tanpa key,
+    // fetch tetap berfungsi normal, cuma limitnya lebih rendah.
+    const jinaKey = getJinaKey();
+    if (jinaKey) headers['Authorization'] = 'Bearer ' + jinaKey;
+    const res = await fetch('https://r.jina.ai/' + cleanUrl, { headers });
+    if (!res.ok) {
+      return JSON.stringify({ error: `Gagal mengambil halaman (status ${res.status}). Kemungkinan URL tidak valid, halaman blokir akses otomatis, atau sedang kena rate limit — coba lagi sebentar.` });
+    }
+    let text = await res.text();
+    let truncated = false;
+    if (text.length > MAX_WEB_FETCH_CHARS) {
+      text = text.slice(0, MAX_WEB_FETCH_CHARS);
+      truncated = true;
+    }
+    return JSON.stringify({ url: cleanUrl, content: text, truncated });
+  } catch (e) {
+    return JSON.stringify({ error: e.message || 'Gagal mengambil isi halaman. Periksa apakah URL benar dan bisa diakses.' });
   }
 }
 
@@ -4525,6 +4592,9 @@ async function executeTool(name, args){
   if (name === 'web_search') {
     return await performWebSearch(args.query || '');
   }
+  if (name === 'web_fetch') {
+    return await performWebFetch(args.url || '');
+  }
   if (name === 'animate_image') {
     return await runAnimateImageTool(args || {});
   }
@@ -4744,20 +4814,7 @@ function createTypewriter(bubbleEl){
    ========================================================= */
 const HTML_CODE_INTENT_KEYWORDS = [
   'html', 'game', 'canvas', 'ular', 'snake', 'tetris', 'flappy', 'pong',
-  'platformer', 'website', 'web app', 'landing page', 'aplikasi web',
-  'chatbot', 'chat bot', 'dashboard', 'kalkulator', 'calculator', 'form',
-  'todo', 'to-do', 'to do list', 'quiz', 'kuis', 'portfolio', 'portofolio',
-  'timer', 'stopwatch', 'jam', 'clock', 'kalender', 'calendar', 'notes app',
-  'aplikasi catatan', 'blog', 'e-commerce', 'ecommerce', 'toko online',
-  'login page', 'halaman login', 'signup', 'registrasi', 'profile card',
-  'kartu profil', 'card game', 'memory game', 'puzzle', 'quiz app',
-  'survey', 'polling', 'voting app', 'music player', 'pemutar musik',
-  'video player', 'gallery', 'galeri foto', 'slideshow', 'carousel',
-  'navbar', 'sidebar', 'modal', 'popup', 'animasi css', 'css animation',
-  'responsive', 'responsif', 'ui component', 'komponen ui', 'widget',
-  'app sederhana', 'simple app', 'aplikasi sederhana', 'prototype', 'prototipe',
-  'mockup', 'template', 'halaman web', 'web page', 'single page', 'spa',
-  'interactive', 'interaktif', 'drag and drop', 'drag drop'
+  'platformer', 'website', 'web app', 'landing page', 'aplikasi web'
 ];
 function isHtmlCodeRequest(text){
   const q = (text || '').toLowerCase();
@@ -4788,7 +4845,7 @@ async function handleSend(){
 
   renderTyping();
 
-  let wantsHtmlCode = isHtmlCodeRequest(text) || !!lastRunCode;
+  const wantsHtmlCode = isHtmlCodeRequest(text) || !!lastRunCode;
 
   try {
     let streamRow = null;
@@ -4854,16 +4911,6 @@ async function handleSend(){
         // Kalau ini permintaan kode HTML: begitu terdeteksi mulai menulis code block,
         // buka panel artefak secara otomatis (live), dorong progress kodenya real-time,
         // dan JANGAN tampilkan code block mentah itu di bubble chat (cukup teks di luar kode).
-        //
-        // FALLBACK PENTING: HTML_CODE_INTENT_KEYWORDS tidak bisa mencakup semua kemungkinan kata
-        // yang dipakai user ("chatbot", "dashboard", dll bisa saja lolos/kurang lengkap). Supaya
-        // kode tetap masuk ke artefak walau kata di pesan user tidak match daftar keyword, di sini
-        // kita cek juga ISI jawaban model secara langsung: begitu terdeteksi ada tag HTML dokumen
-        // lengkap (<!DOCTYPE html> atau <html) di dalam partialText, upgrade wantsHtmlCode jadi true
-        // meski awalnya false, supaya tidak nyangkut jadi code block biasa di chat.
-        if (!wantsHtmlCode && /<!DOCTYPE\s+html|<html[\s>]/i.test(partialText)) {
-          wantsHtmlCode = true;
-        }
         if (wantsHtmlCode) {
           const code = extractHtmlCodeFromPartial(partialText);
           if (code !== null) {
@@ -4893,7 +4940,9 @@ async function handleSend(){
           window.__astraCurrentAnimateContainer = streamRow.querySelector('.animate-slot') || null;
         }
         if (toolName === 'web_search') {
-          showSearchIndicator(streamRow);
+          showSearchIndicator(streamRow, 'search');
+        } else if (toolName === 'web_fetch') {
+          showSearchIndicator(streamRow, 'fetch');
         } else if (toolName === null && streamRow) {
           hideSearchIndicator(streamRow);
         }
@@ -4973,16 +5022,7 @@ async function handleSend(){
       renderMessage('model', 'Kamu belum masukkan API key Gemini. Buka menu "API Key" di sidebar ya.');
       openApiKeyModal();
     } else {
-      const modelLabel = ASTRA_MODELS[getSelectedModel()]?.label || 'model ini';
-      const msg = (e.message || '').toLowerCase();
-      const isRateLimited = msg.includes('rate-limit') || msg.includes('rate limit') || msg.includes('temporarily') || msg.includes('429');
-      if (isRateLimited) {
-        const dict = translations[getLang()] || translations.en;
-        const template = dict['error-rate-limited'] || translations.en['error-rate-limited'];
-        renderMessage('model', template.replace('{model}', modelLabel) + `\n\n\`\`\`\nDetail teknis (untuk debug):\nModel: ${getSelectedModel()}\nPesan asli: ${e.message}\n\`\`\``);
-      } else {
-        renderMessage('model', 'Maaf, ada masalah saat menghubungi Astra: ' + e.message + `\n\n\`\`\`\nDetail teknis (untuk debug):\nModel: ${getSelectedModel()}\nPesan: ${e.message}\n${e.stack ? 'Stack: ' + e.stack.split('\n').slice(0,3).join(' | ') : ''}\n\`\`\``);
-      }
+      renderMessage('model', 'Maaf, ada masalah saat menghubungi Astra: ' + e.message);
     }
     console.error(e);
   }
