@@ -4956,9 +4956,9 @@ async function handleSend(){
       if (isRateLimited) {
         const dict = translations[getLang()] || translations.en;
         const template = dict['error-rate-limited'] || translations.en['error-rate-limited'];
-        renderMessage('model', template.replace('{model}', modelLabel));
+        renderMessage('model', template.replace('{model}', modelLabel) + `\n\n\`\`\`\nDetail teknis (untuk debug):\nModel: ${getSelectedModel()}\nPesan asli: ${e.message}\n\`\`\``);
       } else {
-        renderMessage('model', 'Maaf, ada masalah saat menghubungi Astra: ' + e.message);
+        renderMessage('model', 'Maaf, ada masalah saat menghubungi Astra: ' + e.message + `\n\n\`\`\`\nDetail teknis (untuk debug):\nModel: ${getSelectedModel()}\nPesan: ${e.message}\n${e.stack ? 'Stack: ' + e.stack.split('\n').slice(0,3).join(' | ') : ''}\n\`\`\``);
       }
     }
     console.error(e);
