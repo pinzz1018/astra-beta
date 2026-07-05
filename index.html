@@ -514,6 +514,16 @@
     flex-shrink:0; color: var(--text-soft);
     animation: search-spin 1.4s linear infinite;
   }
+  /* Status "selesai": chip tetap permanen di layar, tapi animasi (ikon berputar + teks shimmer)
+     dihentikan — jadi statis, tidak lagi bergerak, meski elemennya tidak pernah dihapus. */
+  .search-indicator.done svg{ animation: none; }
+  .search-indicator.done .shimmer-text{
+    animation: none;
+    background: none;
+    -webkit-background-clip: unset;
+    background-clip: unset;
+    color: var(--text-soft);
+  }
   @keyframes search-spin{ 100%{ transform: rotate(360deg); } }
   /* ---------- Source button (tombol "Sumber"/"Source" tunggal dgn stack favicon, mirip Claude) ---------- */
   .source-chips-row{
@@ -3341,8 +3351,10 @@ function closeSourcesSheet(){
 // dari seluruh pemanggilan web_search dalam jawaban ini digabung jadi SATU tombol "Sumber" di akhir
 // jawaban (dedup per domain) — gaya ringkas seperti Claude, bukan satu blok besar per pencarian.
 
-// Indikator "Mencari di web" / "Membaca halaman" dengan efek shimmer — tampilan beda dari reading-indicator.
-// mode: 'search' (default, ikon kaca pembesar) atau 'fetch' (ikon dokumen/link, dipakai saat web_fetch berjalan).
+// Indikator "Mencari di web" / "Membaca halaman" dengan efek shimmer selagi berjalan.
+// mode: 'search' (ikon kaca pembesar) atau 'fetch' (ikon dokumen/link).
+// PERMANEN: chip ini tidak pernah dihapus. Begitu tool-nya selesai, animasinya dibekukan
+// (class "done") supaya jadi teks statis, tapi elemennya tetap nempel selamanya di layar.
 function buildSearchIndicatorHtml(mode = 'search'){
   const isFetch = mode === 'fetch';
   const label = isFetch
@@ -3351,23 +3363,33 @@ function buildSearchIndicatorHtml(mode = 'search'){
   const icon = isFetch
     ? '<path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>'
     : '<circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/>';
-  return `<div class="search-indicator" data-search-indicator><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">${icon}</svg><span class="shimmer-text">${label}</span></div>`;
+  return `<div class="search-indicator" data-search-indicator="active"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">${icon}</svg><span class="shimmer-text">${label}</span></div>`;
 }
 
 // Tampilkan indikator pencarian web di dalam bubble-col milik row pesan model tertentu.
+// Setiap panggilan (search atau fetch) SELALU jadi chip BARU yang ditambahkan (bukan
+// menimpa/mengganti chip sebelumnya) — supaya kalau ada beberapa tool call berturut-turut,
+// semua chip-nya tetap kelihatan berjajar, tidak ada yang hilang atau tertimpa.
 function showSearchIndicator(row, mode = 'search'){
   if (!row) return;
   const col = row.querySelector('.bubble-col');
-  if (!col || col.querySelector('[data-search-indicator]')) return;
+  if (!col) return;
+  // Bekukan dulu indikator aktif sebelumnya (kalau ada & masih "active") sebelum menambah yang baru,
+  // supaya tidak ada 2 chip yang keduanya masih shimmer bersamaan.
+  const stillActive = col.querySelector('[data-search-indicator="active"]');
+  if (stillActive) stillActive.classList.add('done');
   col.insertAdjacentHTML('afterbegin', buildSearchIndicatorHtml(mode));
   scrollToBottom();
 }
 
-// Sembunyikan/hapus indikator pencarian web (dipanggil begitu pencarian selesai / Astra mulai menjawab).
+// Bekukan (BUKAN hapus) semua indikator yang masih aktif di row ini — dipanggil begitu tool
+// selesai / Astra mulai menjawab. Chip tetap tampil permanen di layar, cuma animasinya berhenti.
 function hideSearchIndicator(row){
   if (!row) return;
-  const el = row.querySelector('[data-search-indicator]');
-  if (el) el.remove();
+  row.querySelectorAll('[data-search-indicator="active"]').forEach(el => {
+    el.classList.add('done');
+    el.setAttribute('data-search-indicator', 'done');
+  });
 }
 
 function renderMessage(role, text, images = [], animate = true, showReadingIndicator = false, toolEvents = null){
@@ -3382,6 +3404,15 @@ function renderMessage(role, text, images = [], animate = true, showReadingIndic
     : '';
   const textHtml = text ? (toolEvents && toolEvents.length ? injectToolEventChips(text, toolEvents) : formatText(text)) : '';
   const readingHtml = showReadingIndicator ? READING_INDICATOR_HTML : '';
+  // Rekonstruksi chip indikator "Mencari di web"/"Membaca halaman" dalam keadaan BEKU (done) dari
+  // riwayat toolEvents, supaya tetap tampil permanen walau chat di-reload/refresh — bukan cuma
+  // muncul sekali pas live streaming lalu hilang begitu direfresh.
+  const frozenIndicatorsHtml = (toolEvents && toolEvents.length)
+    ? toolEvents
+        .filter(ev => ev.type === 'search' || ev.type === 'fetch')
+        .map(ev => buildSearchIndicatorHtml(ev.type === 'fetch' ? 'fetch' : 'search').replace('class="search-indicator"', 'class="search-indicator done"').replace('data-search-indicator="active"', 'data-search-indicator="done"'))
+        .join('')
+    : '';
 
   if (role === 'user') {
     row.innerHTML = `<div class="bubble-col"><div class="bubble">${imagesHtml}${textHtml}</div></div><div class="avatar me">${(currentUser?.displayName || '?')[0].toUpperCase()}</div>`;
@@ -3389,7 +3420,7 @@ function renderMessage(role, text, images = [], animate = true, showReadingIndic
     // "animate-slot" adalah kontainer terpisah dari .bubble (yang isinya sering di-overwrite penuh
     // oleh efek typewriter) — supaya kartu progress/video hasil animate_image tidak pernah terhapus
     // di tengah proses streaming teks jawaban.
-    row.innerHTML = `<div class="avatar ai">A</div><div class="bubble-col">${readingHtml}<div class="animate-slot"></div><div class="bubble">${imagesHtml}${textHtml}</div></div>`;
+    row.innerHTML = `<div class="avatar ai">A</div><div class="bubble-col">${readingHtml}${frozenIndicatorsHtml}<div class="animate-slot"></div><div class="bubble">${imagesHtml}${textHtml}</div></div>`;
   }
   messagesEl.appendChild(row);
   scrollToBottom();
@@ -4732,13 +4763,13 @@ async function askAstraStream(history, onChunk, onStatus){
       })
     });
 
-    if (onStatus) {
-      const primaryCall = functionCalls[0];
-      onStatus(primaryCall.name);
-    }
-
     const functionResponseParts = [];
     for (const fc of functionCalls) {
+      // Panggil onStatus SETIAP kali sebuah tool mulai dieksekusi (bukan cuma tool pertama di
+      // round ini) — supaya kalau model memanggil web_search LALU web_fetch di round yang sama,
+      // indikator "Mencari di web" -> "Membaca halaman" tetap berganti sesuai urutan aslinya,
+      // bukan cuma nampilin status tool pertama doang.
+      if (onStatus) onStatus(fc.name);
       const result = await executeTool(fc.name, fc.args || {});
       functionResponseParts.push({
         functionResponse: {
