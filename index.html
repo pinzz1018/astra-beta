@@ -1336,7 +1336,7 @@ function getCodingModeNote(){
 // kalau user pindah-pindah model, preferensi effort masing-masing model tidak saling menimpa.
 const MODEL_EFFORT_SUPPORTED = ['gemini-3.5-flash', 'openai/gpt-oss-120b:free'];
 const EFFORT_LEVELS = ['low', 'medium', 'high'];
-const EFFORT_DEFAULT = 'medium';
+const EFFORT_DEFAULT = 'high';
 function modelSupportsEffort(modelId){
   return MODEL_EFFORT_SUPPORTED.includes(modelId);
 }
@@ -1411,6 +1411,13 @@ After receiving the checklist from search_docs, write your code following that c
 - If there's fairly complex non-visual logic (position calculations, collision detection, scoring), consider calling "run_code" to test that logic separately before combining it into the full HTML.
 If even one of the points above fails when you imagine it, DO NOT send that code — fix it until you're confident the canvas will actually be visible as soon as the file is opened, then send it to the user. Failing to follow this is the most common cause of a blank/empty canvas even when there's no JavaScript error at all.
 
+GENERAL SELF-CHECK (for non-canvas code too, e.g. forms, API calls, backend endpoints, data processing): before sending any fairly substantial piece of code, briefly imagine running it with realistic and edge-case input (empty input, invalid input, a failed network request, an empty list) — would it crash, hang, or silently do the wrong thing? If yes, fix it first. This doesn't need to be as exhaustive as the canvas checklist, just a genuine sanity pass rather than sending the first draft untested in your head.
+
+A few habits that make your coding answers noticeably better, apply them together with the rules above:
+- State hidden assumptions: if the request is ambiguous (e.g. no framework/language/library specified, or a detail is left open), briefly state in one line the assumption you're going with before the code, so the user can correct it if it's wrong — don't just silently guess and stay quiet about it.
+- Prefer simple over clever: when there are multiple valid ways to solve something, default to the simpler, more readable one, even if a more "clever" or optimized approach exists — only reach for the clever/optimized version if the user asked for performance/scale, or the simple version is genuinely inadequate.
+- Write for a human reader: assume the code will be read and maintained by another developer, not just executed once — use clear names, add brief comments for non-obvious logic (not for obvious lines), and keep structure easy to follow, not just "technically correct."
+
 If the user asks about the knowledge base/technical notes you use (e.g. "who made the knowledge base", "where are those notes from", "what's in your knowledge base"), answer honestly that it's a set of internal technical best-practice notes prepared as part of the Astra system to help make coding answers more accurate, not something that should be tied to the question "who created Astra".
 
 Use these tools reasonably as needed — don't call them for irrelevant things, and don't hesitate to call them when doing so will genuinely make your answer better.`;
@@ -1432,7 +1439,9 @@ Tools you can call:
 - "edit_code": MUST be used (instead of rewriting the whole file) if the user's message contains a block like "[CURRENT ACTIVE CODE IN THE USER'S ARTIFACT PANEL ...]" AND the message is: (a) a revision/addition/fix instruction ("add feature X", "change color Y", "fix bug Z"), OR (b) a BUG REPORT/COMPLAINT that CLEARLY refers to an element/feature of that currently active app (not another topic) — e.g. "why doesn't this button work", "why doesn't the sidebar show up", "this errors when I open it". Do NOT treat it as a bug report if the message topic is clearly unrelated to the active app/code (e.g. discussing something else entirely and then saying "this isn't showing up") — for that, answer according to the actual topic, ignore the [ACTIVE CODE] block. If it genuinely is a relevant bug report: find the root cause in the active code then call edit_code directly, DO NOT rewrite the entire file even if you feel you could make a cleaner version from scratch. Send old_str (an EXACT snippet from the active code, must be unique) + new_str per change, multiple at once is fine. If it errors (old_str not found/ambiguous), fix the old_str and call again, don't immediately rewrite everything. Only do a full rewrite via code block if the user is asking for a genuinely NEW project/file from scratch. BEFORE acting, first determine: is the user's message CLEARLY about this app, CLEARLY another topic (ignore the code block), or GENUINELY AMBIGUOUS — if ambiguous (rare), briefly ask the user back ("do you mean the app from before, or something new?") before acting, don't guess.
 - "web_search" (if available): look up current/factual info online. Only call this when you genuinely need up-to-date data (news, prices, schedules, etc.), not for regular chat. Its results are already verified & account for today's date — fully trust them, don't call them "hoax"/"futuristic". Don't write a manual source list in your answer, that's displayed automatically by the app.
 
-For games/apps using <canvas>: before sending the final code, imagine opening that file in a browser — make sure there's an initial draw/render on load (not waiting for a button press), canvas.width/height are set via JS (not just CSS), and the game loop calls itself again every iteration. If unsure about any of these, fix it before sending — this is the most common cause of a blank/empty canvas.
+For games/apps using <canvas>: before sending the final code, imagine opening that file in a browser — make sure there's an initial draw/render on load (not waiting for a button press), canvas.width/height are set via JS (not just CSS), and the game loop calls itself again every iteration. If unsure about any of these, fix it before sending — this is the most common cause of a blank/empty canvas. For other substantial code (forms, API calls, backend), briefly sanity-check edge cases (empty/invalid input, failed request) before sending.
+
+Coding habits: if the request is ambiguous, state your assumption in one line before the code. Prefer simple, readable solutions over clever/optimized ones unless asked for performance. Write code for a human reader (clear names, brief comments on non-obvious logic).
 
 On how to close coding answers: if the user asks for "code"/"script" (without the word "file"), DO NOT write instructions on saving it as a file (don't say "create a new file", "save as .html", etc.) — just briefly explain its features. Only include file-saving instructions if the user explicitly uses the word "file".
 
@@ -1547,6 +1556,101 @@ const CODING_KNOWLEDGE_BASE = [
 8. Selalu sertakan kondisi berhenti/reset (collision detection dengan dinding & badan sendiri untuk game seperti ular) dan uji secara logis: apakah collision check dijalankan SEBELUM atau SESUDAH posisi diupdate — urutan yang salah menyebabkan game terasa "nabrak duluan" atau tidak pernah game over.
 
 9. Setelah kode selesai ditulis, telusuri ulang alur secara manual: inisialisasi → gambar pertama kali → loop berjalan → input mengubah state → render mengikuti state terbaru. Jika ada satu langkah yang terputus (misalnya draw pertama lupa dipanggil), kanvas akan terlihat kosong walau tidak ada error JavaScript sama sekali.`
+  },
+  {
+    id: "error-handling-ux",
+    keywords: ["error handling", "try catch", "error", "exception", "loading state", "empty state", "fallback", "user experience", "ux"],
+    title: "Error Handling & UX State yang Baik",
+    content: `Kode yang "jalan tanpa error saat ditulis" berbeda dari kode yang "robust saat dipakai user sungguhan". Checklist wajib:
+
+1. Setiap operasi yang bisa gagal (fetch API, parsing JSON, akses localStorage, operasi file) HARUS dibungkus try/catch — jangan asumsikan operasi selalu sukses.
+
+2. Tampilkan TIGA state secara eksplisit untuk operasi async: loading (sedang proses), error (gagal, dengan pesan yang jelas bukan cuma "terjadi kesalahan"), dan empty (berhasil tapi datanya kosong/nol hasil) — ketiganya sering dilupakan, developer cuma handle "success" saja.
+   Contoh pola React:
+   \`\`\`jsx
+   if (loading) return <Spinner />;
+   if (error) return <ErrorMessage retry={fetchData}>{error.message}</ErrorMessage>;
+   if (!data || data.length === 0) return <EmptyState text="Belum ada data" />;
+   return <DataList items={data} />;
+   \`\`\`
+
+3. Jangan pernah menelan error secara diam-diam (catch(e){} kosong) — minimal log ke console, idealnya juga beri feedback ke user.
+
+4. Untuk validasi input, gagal secepat mungkin (fail fast) dengan pesan spesifik: sebutkan field mana yang salah dan kenapa, bukan pesan generik "input tidak valid".
+
+5. Sediakan cara retry/recover untuk error yang sifatnya sementara (network timeout, rate limit) — jangan buat user harus reload seluruh halaman.`
+  },
+  {
+    id: "form-validation",
+    keywords: ["form", "validasi", "validation", "input", "email", "password", "required field", "form html"],
+    title: "Form & Input Validation Best Practices",
+    content: `1. Validasi di DUA sisi: client-side (untuk UX cepat/instan feedback) DAN server-side/logic-side (karena client-side selalu bisa dilewati/dimanipulasi) — jangan pernah percaya validasi client saja untuk data yang menentukan.
+
+2. Gunakan atribut HTML native dulu sebelum reinvent the wheel: required, type="email", minlength, maxlength, pattern — browser sudah menghandle sebagian validasi dasar secara gratis.
+
+3. Beri feedback real-time yang jelas: tandai field mana yang error, dengan pesan spesifik di dekat field itu (bukan cuma alert() generik di pojok), dan bersihkan pesan error begitu user mulai memperbaiki input.
+
+4. Untuk password: validasi kekuatan password di sisi client sebagai bantuan UX, tapi JANGAN PERNAH kirim/simpan password dalam bentuk plain text — itu tanggung jawab backend untuk hashing (bcrypt/argon2), bukan sesuatu yang bisa "dijamin aman" hanya dari JS frontend.
+
+5. Disable tombol submit selama proses submit berlangsung (mencegah double-submit) dan aktifkan kembali setelah selesai (baik sukses maupun gagal) — pola umum: set state isSubmitting=true di awal, reset di finally block.
+
+6. Untuk form dengan banyak field, pertimbangkan validasi per-field saat blur (user keluar dari field) daripada menunggu submit, supaya user tidak kaget dengan banyak error sekaligus di akhir.`
+  },
+  {
+    id: "async-data-fetching",
+    keywords: ["fetch", "api call", "axios", "async data", "loading", "http request", "rest api call"],
+    title: "Pola Fetch Data & Async yang Robust",
+    content: `1. Selalu tangani 3 kemungkinan hasil dari fetch: sukses dengan data, sukses tapi status HTTP error (fetch() TIDAK otomatis throw untuk status 4xx/5xx — harus cek res.ok secara manual), dan gagal total (network error, throw otomatis).
+   \`\`\`javascript
+   async function getData(url) {
+     try {
+       const res = await fetch(url);
+       if (!res.ok) throw new Error(\`HTTP error \${res.status}\`);
+       return await res.json();
+     } catch (err) {
+       console.error('Fetch gagal:', err);
+       throw err; // lempar lagi supaya caller bisa tampilkan UI error
+     }
+   }
+   \`\`\`
+
+2. Untuk request yang mungkin lambat, pertimbangkan AbortController untuk timeout atau membatalkan request lama saat user mengetik cepat (misalnya di search box) — mencegah race condition di mana response lama tiba setelah response baru.
+
+3. Jangan lupa cleanup: jika komponen di-unmount sebelum fetch selesai (React/Vue), pastikan tidak melakukan setState pada komponen yang sudah tidak ada (gunakan flag isMounted atau AbortController di useEffect cleanup).
+
+4. Untuk data yang sering diakses berulang, pertimbangkan caching sederhana (in-memory Map atau localStorage dengan TTL) untuk mengurangi request berulang yang tidak perlu.`
+  },
+  {
+    id: "nodejs-backend-basics",
+    keywords: ["node", "nodejs", "express", "backend", "server", "api endpoint", "middleware"],
+    title: "Node.js/Express Backend Best Practices",
+    content: `1. Selalu gunakan middleware error handler terpusat di Express (function dengan 4 parameter: (err, req, res, next)) di akhir chain middleware, jangan tangani error secara ad-hoc di tiap route.
+
+2. Validasi & sanitasi SEMUA input dari request (body, query, params) sebelum diproses — jangan pernah percaya data dari client, gunakan library seperti zod/joi/express-validator untuk skema validasi yang konsisten.
+
+3. Gunakan async/await dengan try/catch di setiap route handler async, atau wrapper seperti express-async-handler, supaya Promise rejection tidak silently crash server tanpa response ke client.
+
+4. Jangan expose stack trace atau detail error internal ke response client di production — log detail lengkap di server, kirim pesan generik + kode error ke client.
+
+5. Gunakan environment variables (.env, jangan hardcode) untuk secret/config (database URL, API key, port), dan JANGAN PERNAH commit file .env ke git — sertakan di .gitignore.
+
+6. Untuk endpoint yang mengubah data (POST/PUT/DELETE), kembalikan status code HTTP yang sesuai (201 untuk created, 204 untuk delete tanpa body, 400 untuk bad request, 401/403 untuk auth, 404 untuk not found, 500 untuk server error) — jangan selalu 200 untuk semua kasus.`
+  },
+  {
+    id: "performance-optimization",
+    keywords: ["performance", "optimasi", "optimize", "lambat", "slow", "lag", "memory leak", "render lambat"],
+    title: "Performance Optimization Dasar",
+    content: `1. Untuk render list panjang di frontend (ratusan/ribuan item), gunakan virtualisasi (render hanya item yang terlihat di viewport) alih-alih render semua item sekaligus ke DOM.
+
+2. Debounce/throttle event yang terpicu sangat sering (scroll, resize, input keyup untuk search) — jangan jalankan operasi berat (fetch API, kalkulasi kompleks) di setiap event tanpa delay.
+
+3. Hindari memory leak: selalu bersihkan event listener, interval/timeout, dan subscription saat komponen di-unmount atau elemen dihapus — event listener yang tidak dibersihkan akan terus menumpuk di memory pada single-page app.
+
+4. Untuk gambar, gunakan lazy loading (loading="lazy" di tag img, atau Intersection Observer) untuk gambar yang belum terlihat di viewport awal.
+
+5. Minimalkan operasi DOM berulang di dalam loop — kumpulkan perubahan dulu (misal via DocumentFragment atau batch update), baru sentuh DOM sekali di akhir, karena setiap sentuhan DOM relatif mahal dibanding operasi JS murni.
+
+6. Untuk kalkulasi berat yang hasilnya sama untuk input yang sama, pertimbangkan memoization (cache hasil berdasarkan input) daripada menghitung ulang setiap kali dipanggil.`
   }
 ];
 
@@ -2261,6 +2365,7 @@ const translations = {
     "apikey-groq-hint": "Get a free Groq key at",
     "apikey-openrouter-title": "OpenRouter API Key",
     "apikey-openrouter-desc": "Optional: enter an OpenRouter API key to use Astra 1.5 Ultra (GPT-OSS 120B) and Astra 2.5 (NVIDIA Nemotron 3 Super) — both free. The key is stored only on this device.",
+    "error-rate-limited": "Whoa, {model} is really busy with other people right now (this is a free model, so its quota is shared across a lot of users). Try one of these:\n\n- Wait 1-2 minutes then send your message again\n- Or switch to another model for now via the model picker above\n\nThis isn't a bug in Astra, the provider's side is just full right now.",
     "apikey-openrouter-hint": "Get a free OpenRouter key at",
     "apikey-removebg-title": "remove.bg API Key",
     "apikey-removebg-desc": "Optional: enter a remove.bg API key to use the background replace/remove feature (free, 50 calls/month). The key is stored only on this device.",
@@ -2327,6 +2432,7 @@ const translations = {
     "apikey-groq-hint": "Groq key gratis di",
     "apikey-openrouter-title": "OpenRouter API Key",
     "apikey-openrouter-desc": "Opsional: masukkan API key OpenRouter untuk memakai model Astra 1.5 Ultra (GPT-OSS 120B) dan Astra 2.5 (NVIDIA Nemotron 3 Super) — keduanya gratis. Key disimpan hanya di perangkat ini.",
+    "error-rate-limited": "Waduh, {model} lagi rame banget dipakai orang lain saat ini (ini model gratis, jadi kuotanya dibagi bareng-bareng ke banyak orang). Coba salah satu dari ini ya:\n\n- Tunggu 1-2 menit lalu kirim pesanmu lagi\n- Atau ganti sementara ke model lain lewat menu pemilihan model di atas\n\nBukan bug dari Astra, cuma lagi penuh aja di sisi providernya.",
     "apikey-openrouter-hint": "OpenRouter key gratis di",
     "apikey-removebg-title": "remove.bg API Key",
     "apikey-removebg-desc": "Opsional: masukkan API key remove.bg untuk memakai fitur ganti/hapus background foto (gratis 50 kali/bulan). Key disimpan hanya di perangkat ini.",
@@ -4844,7 +4950,16 @@ async function handleSend(){
       renderMessage('model', 'Kamu belum masukkan API key Gemini. Buka menu "API Key" di sidebar ya.');
       openApiKeyModal();
     } else {
-      renderMessage('model', 'Maaf, ada masalah saat menghubungi Astra: ' + e.message);
+      const modelLabel = ASTRA_MODELS[getSelectedModel()]?.label || 'model ini';
+      const msg = (e.message || '').toLowerCase();
+      const isRateLimited = msg.includes('rate-limit') || msg.includes('rate limit') || msg.includes('temporarily') || msg.includes('429');
+      if (isRateLimited) {
+        const dict = translations[getLang()] || translations.en;
+        const template = dict['error-rate-limited'] || translations.en['error-rate-limited'];
+        renderMessage('model', template.replace('{model}', modelLabel));
+      } else {
+        renderMessage('model', 'Maaf, ada masalah saat menghubungi Astra: ' + e.message);
+      }
     }
     console.error(e);
   }
