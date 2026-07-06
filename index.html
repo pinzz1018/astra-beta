@@ -4746,7 +4746,17 @@ async function executeTool(name, args){
     return runCodeSandboxed(args.code || '');
   }
   if (name === 'edit_code') {
-    const res = applyCodeEdits(args.edits || []);
+    // applyCodeEdits() sendiri 100% instan (sinkron, tanpa network call) — beda dengan web_search/
+    // web_fetch yang otomatis makan waktu round-trip jaringan sehingga chip statusnya sempat
+    // terlihat. Tanpa delay ini, chip "Mengedit kode" akan langsung berubah jadi "Finished" dalam
+    // hitungan milidetik, sehingga pengguna tidak sempat melihatnya sama sekali. Delay kecil ini
+    // MURNI kosmetik (tidak mengubah hasil edit), supaya status "sedang mengedit" tetap kelihatan
+    // sejenak sebelum beralih ke selesai — pengalaman yang konsisten dengan tool lain.
+    const MIN_EDIT_VISIBLE_MS = 600;
+    const [res] = await Promise.all([
+      Promise.resolve(applyCodeEdits(args.edits || [])),
+      new Promise(resolve => setTimeout(resolve, MIN_EDIT_VISIBLE_MS))
+    ]);
     return JSON.stringify(res.ok ? { success: true, message: 'Edit berhasil diterapkan ke kode aktif.' } : { success: false, error: res.error });
   }
   if (name === 'web_search') {
