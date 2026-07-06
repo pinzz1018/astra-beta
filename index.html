@@ -371,6 +371,25 @@
   @keyframes artifactSpin{ to{ transform: rotate(360deg); } }
   .artifact-chip-body{ min-width:0; flex:1; display:flex; flex-direction:column; gap:1px; }
   .artifact-chip-label{ font-size:13px; font-weight:600; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  /* Efek shimmer (kilau bergerak kiri->kanan) di TEKS label chip selagi masih proses (working),
+     memakai gradient & animasi yang sama persis dengan .search-indicator .shimmer-text supaya
+     konsisten di seluruh aplikasi. Berhenti otomatis begitu label tidak lagi "working" (lihat JS:
+     class ini di-toggle bareng .working pada [data-chip-icon]). */
+  .artifact-chip-label.working{
+    background: linear-gradient(
+      90deg,
+      var(--text) 0%,
+      var(--text) 35%,
+      #fff 50%,
+      var(--text) 65%,
+      var(--text) 100%
+    );
+    background-size: 200% 100%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    animation: shimmer-move 1.6s linear infinite;
+  }
   .artifact-chip-sub{ font-size:11.5px; color:var(--text-soft); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   .artifact-chip-chevron{ flex-shrink:0; color: var(--text-soft); display:flex; }
 
@@ -2221,7 +2240,7 @@ function createArtifactChip(container, fileName){
   chip.innerHTML =
     `<div class="artifact-chip-icon working" data-chip-icon>${ARTIFACT_ACTION_ICONS.reading}</div>` +
     `<div class="artifact-chip-body">` +
-      `<div class="artifact-chip-label" data-chip-label>${artifactStepLabel('reading')}</div>` +
+      `<div class="artifact-chip-label working" data-chip-label>${artifactStepLabel('reading')}</div>` +
       `<div class="artifact-chip-sub" data-chip-sub>${fileName || dict['artifact-default-title']}</div>` +
     `</div>` +
     `<div class="artifact-chip-chevron" data-chip-chevron><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></div>`;
@@ -2256,6 +2275,7 @@ function createArtifactChip(container, fileName){
       chip.querySelector('[data-chip-icon]').innerHTML = ARTIFACT_ACTION_ICONS[step];
       chip.querySelector('[data-chip-label]').textContent = artifactStepLabel(step);
       chip.querySelector('[data-chip-icon]').classList.toggle('working', !isDone);
+      chip.querySelector('[data-chip-label]').classList.toggle('working', !isDone);
       detail.querySelectorAll('[data-step]').forEach(el => {
         const idx = ARTIFACT_STEP_ORDER.indexOf(el.dataset.step);
         const curIdx = ARTIFACT_STEP_ORDER.indexOf(step);
@@ -2266,6 +2286,7 @@ function createArtifactChip(container, fileName){
     finish(){
       chip.querySelector('[data-chip-icon]').innerHTML = ARTIFACT_ACTION_ICONS.done;
       chip.querySelector('[data-chip-icon]').classList.remove('working');
+      chip.querySelector('[data-chip-label]').classList.remove('working');
       chip.querySelector('[data-chip-label]').textContent = artifactStepLabel('done');
       detail.querySelectorAll('[data-step]').forEach(el => el.classList.add('done'));
     }
@@ -3400,25 +3421,23 @@ function buildSearchIndicatorHtml(mode = 'search'){
 }
 
 // Tampilkan indikator pencarian web SEMENTARA (loading, shimmer) TEPAT MENEMPEL di akhir teks yang
-// SEDANG ditampilkan di dalam bubble (bukan elemen terpisah di atas .bubble-col) — supaya sejak awal
-// loading posisinya SUDAH sama dengan posisi permanennya nanti, tidak ada "loncat" dari atas ke tengah.
-function showSearchIndicator(row, mode = 'search'){
-  if (!row) return;
-  const bubble = row.querySelector('.bubble');
-  if (!bubble) return;
-  // Hapus dulu indikator lama (kalau ada, dari tool sebelumnya di round yang sama) sebelum menambah yang baru.
-  bubble.querySelectorAll('[data-search-indicator]').forEach(el => el.remove());
-  bubble.insertAdjacentHTML('beforeend', buildSearchIndicatorHtml(mode));
-  scrollToBottom();
+// SEDANG ditampilkan. PENTING: ini dititipkan lewat typewriter.setLoadingIndicator(), BUKAN disisip
+// manual ke DOM — karena createTypewriter().tick() meng-overwrite TOTAL innerHTML bubble di setiap
+// frame animasi ketik; elemen yang disisip di luar mekanisme itu akan langsung hilang begitu frame
+// berikutnya jalan (race condition). Dengan dititipkan ke typewriter, chip ini ikut dirender ulang
+// di setiap frame sampai eksplisit dihapus lewat hideSearchIndicator().
+function showSearchIndicator(tw, mode = 'search'){
+  if (!tw || !tw.setLoadingIndicator) return;
+  tw.setLoadingIndicator(buildSearchIndicatorHtml(mode));
 }
 
 // Sembunyikan/hapus indikator pencarian web SEMENTARA (dipanggil begitu tool selesai / Astra mulai
 // menjawab). Chip ini cuma indikator loading live — begitu hilang, posisi PERMANENnya sudah
 // tergantikan oleh chip yang disisip tepat di tengah teks jawaban (lihat injectToolEventChips),
 // jadi tidak perlu dibekukan di sini, cukup dihapus supaya tidak dobel dengan chip permanen itu.
-function hideSearchIndicator(row){
-  if (!row) return;
-  row.querySelectorAll('[data-search-indicator]').forEach(el => el.remove());
+function hideSearchIndicator(tw){
+  if (!tw || !tw.setLoadingIndicator) return;
+  tw.setLoadingIndicator('');
 }
 
 function renderMessage(role, text, images = [], animate = true, showReadingIndicator = false, toolEvents = null){
@@ -4864,6 +4883,10 @@ function createTypewriter(bubbleEl){
   let shownLength = 0;
   let rafId = null;
   let doneResolve = null;
+  let loadingIndicatorHtml = ''; // chip "Mencari di web"/"Membaca halaman" SEMENTARA — kalau ada,
+  // WAJIB ikut dirender di SETIAP frame tick() (bukan disisipkan manual via insertAdjacentHTML),
+  // karena tick() selalu men-overwrite total bubbleEl.innerHTML tiap frame — elemen yang disisip
+  // di luar situ akan langsung lenyap begitu frame berikutnya jalan (race condition lama).
   const CHARS_PER_FRAME = 2; // kecepatan "mengetik" — naikkan untuk lebih cepat
 
   // Auto-scroll pintar untuk setiap .code-block-scroll di dalam bubble:
@@ -4887,13 +4910,18 @@ function createTypewriter(bubbleEl){
     });
   }
 
+  function renderNow(textSlice, showCursor){
+    bubbleEl.innerHTML = formatText(textSlice) +
+      (showCursor ? '<span class="cursor-blink">▍</span>' : '') +
+      loadingIndicatorHtml;
+    setupCodeBlockAutoScroll();
+    applyCodeBlockAutoScroll();
+  }
+
   function tick(){
     if (shownLength < targetText.length){
       shownLength = Math.min(shownLength + CHARS_PER_FRAME, targetText.length);
-      bubbleEl.innerHTML = formatText(targetText.slice(0, shownLength)) +
-        (shownLength < targetText.length ? '<span class="cursor-blink">▍</span>' : '');
-      setupCodeBlockAutoScroll();
-      applyCodeBlockAutoScroll();
+      renderNow(targetText.slice(0, shownLength), shownLength < targetText.length);
       scrollToBottom();
       rafId = requestAnimationFrame(tick);
     } else {
@@ -4904,9 +4932,7 @@ function createTypewriter(bubbleEl){
         doneResolve = null;
         resolveFn();
       } else {
-        bubbleEl.innerHTML = formatText(targetText);
-        setupCodeBlockAutoScroll();
-        applyCodeBlockAutoScroll();
+        renderNow(targetText, false);
       }
     }
   }
@@ -4915,6 +4941,15 @@ function createTypewriter(bubbleEl){
     setTarget(text){
       targetText = text;
       if (!rafId) rafId = requestAnimationFrame(tick);
+    },
+    // Tampilkan/perbarui/hapus chip loading SEMENTARA ("Mencari di web"/"Membaca halaman") yang
+    // ikut nempel di akhir teks yang lagi ditampilkan. html='' berarti dihapus (tidak ada indikator).
+    setLoadingIndicator(html){
+      loadingIndicatorHtml = html || '';
+      // Render ulang segera (bukan cuma menunggu frame berikutnya) supaya perubahan langsung terlihat,
+      // termasuk saat rafId sedang idle (teks streaming sudah berhenti sementara menunggu tool selesai).
+      renderNow(targetText.slice(0, shownLength), shownLength < targetText.length);
+      scrollToBottom();
     },
     // Menunggu animasi mengetik benar-benar selesai menampilkan seluruh targetText,
     // alih-alih langsung memotong ke teks penuh. toolEvents (opsional) dipakai untuk
@@ -5036,7 +5071,7 @@ async function handleSend(){
           window.__astraCurrentAnimateContainer = streamRow.querySelector('.animate-slot') || null;
         }
         // Begitu Astra mulai mengirim teks jawaban, indikator pencarian web (kalau ada) disembunyikan.
-        hideSearchIndicator(streamRow);
+        hideSearchIndicator(typewriter);
 
         // Kalau ini permintaan kode HTML: begitu terdeteksi mulai menulis code block,
         // buka panel artefak secara otomatis (live), dorong progress kodenya real-time,
@@ -5070,11 +5105,11 @@ async function handleSend(){
           window.__astraCurrentAnimateContainer = streamRow.querySelector('.animate-slot') || null;
         }
         if (toolName === 'web_search') {
-          showSearchIndicator(streamRow, 'search');
+          showSearchIndicator(typewriter, 'search');
         } else if (toolName === 'web_fetch') {
-          showSearchIndicator(streamRow, 'fetch');
-        } else if (toolName === null && streamRow) {
-          hideSearchIndicator(streamRow);
+          showSearchIndicator(typewriter, 'fetch');
+        } else if (toolName === null && typewriter) {
+          hideSearchIndicator(typewriter);
         }
         // search_docs beneran dipanggil, DAN ini konteks permintaan kode -> baru buat chip (lazy),
         // mulai di step "reading". Chip TIDAK dibuat untuk search_docs yang dipanggil di luar
@@ -5110,7 +5145,7 @@ async function handleSend(){
         }
       }
     );
-    if (streamRow) hideSearchIndicator(streamRow);
+    if (typewriter) hideSearchIndicator(typewriter);
 
     // Finalisasi artefak: dorong kode final ke panel (preview jadi live-render penuh) & tandai chip selesai.
     if (wantsHtmlCode && lastExtractedCode) {
